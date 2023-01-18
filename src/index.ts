@@ -40,7 +40,7 @@ const popmotionEasing: PopmotionEasing = {
 
 const DATASET_KEY = 'animateGridId';
 
-const toArray = (arrLike: ArrayLike<any>): any[] => {
+const toArray = <T>(arrLike: ArrayLike<T>): T[] => {
   if (!arrLike) return [];
   return Array.prototype.slice.call(arrLike);
 };
@@ -197,6 +197,7 @@ export const wrapGrid = (
           delete itemPosition.stopTween;
           return true;
         }
+        return false;
       })
       .forEach(el => {
         el.style.transform = '';
