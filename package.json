@@ -16,7 +16,9 @@
   "sideEffects": false,
   "scripts": {
     "dev": "vite",
-    "build": "tsc"
+    "build": "tsc",
+    "vitebuild": "vite build",
+    "preview": "vite preview"
   },
   "author": "Alex Holachek",
   "license": "MIT",

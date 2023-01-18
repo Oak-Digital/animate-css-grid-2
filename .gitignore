@@ -5,3 +5,4 @@ node_modules
 src/*.js
 .rpt2_cache
 dist/
+demo-dist
