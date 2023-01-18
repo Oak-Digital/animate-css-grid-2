@@ -1,4 +1,5 @@
 import { wrapGrid } from '../src/index';
+import { tween } from 'popmotion';
 
 const grid: HTMLElement = document.querySelector('.grid')!;
 
@@ -33,6 +34,8 @@ grid.addEventListener('click', (ev) => {
   }
 });
 
+const gridIgnoreElement = document.querySelector<HTMLElement>('.grid .card--2')!;
+console.log(gridIgnoreElement);
 const { unwrapGrid: uwg } = wrapGrid(grid, {
   easing: 'backOut',
   onStart: (els) =>
@@ -50,18 +53,65 @@ const { unwrapGrid } = wrapGrid(grid, {
   easing: 'backOut',
   onStart: (els) =>
     els.forEach((el) => {
-      console.log('onstart');
+      /* console.log('onstart'); */
       el.classList.add('big');
     }),
   onEnd: (els) => {
     els.forEach((el) => el.classList.add('small'));
-    console.log('onend');
+    /* console.log('onend'); */
   },
+  elementsIgnored: [gridIgnoreElement],
 });
 
 document
   .querySelector('.js-remove-listener')
   ?.addEventListener('click', unwrapGrid);
+// // ========================================================
+// // fade test
+// // ========================================================
+
+const gridFade = document.querySelector<HTMLElement>('.grid-fade')!;
+
+const { extractChild, unExtractChild } = wrapGrid(gridFade, {
+});
+
+const gridFadeCard = document.querySelector<HTMLElement>('.grid-fade .card--2')!;
+let expanded = true;
+gridFade.addEventListener('click', (ev) => {
+  if (expanded) {
+    gridFadeCard.style.display = 'block';
+    extractChild(gridFadeCard);
+    tween({
+      from: 1,
+      to: 0,
+      duration: 500,
+    }).start({
+        update: (v: any) => {
+          gridFadeCard.style.opacity = `${v}`;
+        },
+        complete: () => {
+          gridFadeCard.style.display = 'none';
+        },
+      });
+  } else {
+    gridFadeCard.style.display = 'block';
+    unExtractChild(gridFadeCard);
+    tween({
+      from: 0,
+      to: 1,
+      duration: 500,
+    }).start({
+        update: (v: any) => {
+          gridFadeCard.style.opacity = `${v}`;
+        },
+        complete: () => {
+          gridFadeCard.style.display = 'block';
+        },
+      });
+  }
+  expanded = !expanded;
+
+});
 
 // // ========================================================
 // // accordion test

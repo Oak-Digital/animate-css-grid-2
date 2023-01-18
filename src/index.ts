@@ -106,7 +106,10 @@ export const wrapGrid = (
     stagger = 0,
     easing = 'easeInOut',
     onStart = () => {},
+    onElementStart = () => {},
+    onElementEnd = () => {},
     onEnd = () => {},
+    elementsIgnored = [],
   }: WrapGridArguments = {}
 ) => {
   if (!popmotionEasing[easing]) {
@@ -115,6 +118,7 @@ export const wrapGrid = (
 
   let idCounter = 0;
   const getNewId = () => idCounter++;
+
   let mutationsDisabled: boolean = false;
 
   const disableMutationsWhileFunctionRuns = (func: () => void) => {
@@ -132,7 +136,7 @@ export const wrapGrid = (
     elements: HTMLCollectionOf<HTMLElement> | HTMLElement[]
   ) => {
     const gridBoundingClientRect = container.getBoundingClientRect();
-    toArray(elements).forEach(el => {
+    toArray(elements).forEach((el) => {
       if (typeof el.getBoundingClientRect !== 'function') {
         return;
       }
@@ -148,9 +152,8 @@ export const wrapGrid = (
 
       const rect = getGridAwareBoundingClientRect(gridBoundingClientRect, el);
       cachedPositionData[animateGridId].rect = rect;
-      cachedPositionData[
-        animateGridId
-      ].gridBoundingClientRect = gridBoundingClientRect;
+      cachedPositionData[animateGridId].gridBoundingClientRect =
+        gridBoundingClientRect;
     });
   };
   recordPositions(container.children as HTMLCollectionOf<HTMLElement>);
@@ -170,6 +173,36 @@ export const wrapGrid = (
     recordPositions(container.children as HTMLCollectionOf<HTMLElement>);
   }, 20);
   container.addEventListener('scroll', throttledScrollListener);
+
+  const extractedChildren: HTMLElement[] = [];
+
+  // this function should set an absolute position on the element
+  // such that it's in the same place as it was before
+  const extractChild = (el: HTMLElement) => {
+    const isExtracted = extractedChildren.some(
+      (child) => child.dataset[DATASET_KEY] === el.dataset[DATASET_KEY]
+    );
+    if (isExtracted) {
+      return;
+    }
+    extractedChildren.push(el);
+    console.log(extractedChildren);
+    el.style.position = 'absolute';
+    mutationCallback('forceGridAnimation');
+  };
+
+  const unExtractChild = (el: HTMLElement) => {
+    const extractedIndex = extractedChildren.findIndex(
+      (child) => child.dataset[DATASET_KEY] === el.dataset[DATASET_KEY]
+    );
+    if (extractedIndex === -1) {
+      return;
+    }
+    extractedChildren.splice(extractedIndex, 1);
+    console.log(extractedChildren);
+    el.style.position = '';
+    mutationCallback('forceGridAnimation');
+  };
 
   const mutationCallback = (
     mutationsList: MutationRecord[] | 'forceGridAnimation'
@@ -191,7 +224,7 @@ export const wrapGrid = (
     const childrenElements = toArray(container.children) as HTMLElement[];
     // stop current transitions and remove transforms on transitioning elements
     childrenElements
-      .filter(el => {
+      .filter((el) => {
         const itemPosition =
           cachedPositionData[el.dataset[DATASET_KEY] as string];
         if (itemPosition && itemPosition.stopTween) {
@@ -201,7 +234,7 @@ export const wrapGrid = (
         }
         return false;
       })
-      .forEach(el => {
+      .forEach((el) => {
         el.style.transform = '';
         const firstChild = el.children[0] as HTMLElement;
         if (firstChild) {
@@ -209,7 +242,7 @@ export const wrapGrid = (
         }
       });
     const animatedGridChildren = childrenElements
-      .map(el => ({
+      .map((el) => ({
         childCoords: {} as ChildBoundingClientRect,
         el,
         boundingClientRect: getGridAwareBoundingClientRect(
@@ -257,7 +290,7 @@ export const wrapGrid = (
 
     animatedGridChildren
       // do this measurement first so as not to cause layout thrashing
-      .map(data => {
+      .map((data) => {
         const firstChild = data.el.children[0] as HTMLElement;
         // different transform origins give different effects. "50% 50%" is default
         if (firstChild) {
@@ -294,7 +327,7 @@ export const wrapGrid = (
 
           let cachedResolve: (value?: any) => void = () => {};
 
-          const completionPromise = new Promise(resolve => {
+          const completionPromise = new Promise((resolve) => {
             cachedResolve = resolve;
           });
 
@@ -302,11 +335,31 @@ export const wrapGrid = (
 
           applyCoordTransform(el, coords, { immediate: true });
           // now start the animation
+          const isIgnored = elementsIgnored.some(
+            (ignoredEl) =>
+              el.dataset[DATASET_KEY] === ignoredEl.dataset[DATASET_KEY]
+          );
+          const isExtracted = extractedChildren.some(
+            (extractedEl) =>
+              el.dataset[DATASET_KEY] === extractedEl.dataset[DATASET_KEY]
+          );
+
+          const finalCoords = {
+            translateX: 0,
+            translateY: 0,
+            scaleX: 1,
+            scaleY: 1,
+          };
+          const toCoords = isIgnored || isExtracted ? coords : finalCoords;
+          const tweenDuration = isExtracted ? 0 : duration;
           const startAnimation = () => {
+            disableMutationsWhileFunctionRuns(() => {
+              onElementStart(el);
+            });
             const { stop } = tween({
               from: coords,
-              to: { translateX: 0, translateY: 0, scaleX: 1, scaleY: 1 },
-              duration,
+              to: toCoords,
+              duration: tweenDuration,
               ease: popmotionEasing[easing],
             }).start({
               update: (transforms: Coords) => {
@@ -314,7 +367,21 @@ export const wrapGrid = (
                 // this helps prevent layout thrashing
                 sync.postRender(() => recordPositions([el]));
               },
-              complete: () => cachedResolve(),
+              complete: () => {
+                if (isIgnored) {
+                  // set the transform to initial value
+                  applyCoordTransform(el, finalCoords);
+                  sync.postRender(() => {
+                    recordPositions([el]);
+                    disableMutationsWhileFunctionRuns(() => {
+                      onElementEnd(el);
+                    });
+                    cachedResolve();
+                  });
+                } else {
+                  cachedResolve();
+                }
+              },
             });
             itemPosition.stopTween = stop;
           };
@@ -348,5 +415,5 @@ export const wrapGrid = (
     observer.disconnect();
   };
   const forceGridAnimation = () => mutationCallback('forceGridAnimation');
-  return { unwrapGrid, forceGridAnimation };
+  return { unwrapGrid, forceGridAnimation, extractChild, unExtractChild };
 };
