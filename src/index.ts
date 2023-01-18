@@ -113,6 +113,8 @@ export const wrapGrid = (
     throw new Error(`${easing} is not a valid easing name`);
   }
 
+  let idCounter = 0;
+  const getNewId = () => idCounter++;
   let mutationsDisabled: boolean = false;
 
   const disableMutationsWhileFunctionRuns = (func: () => void) => {
@@ -135,7 +137,7 @@ export const wrapGrid = (
         return;
       }
       if (!el.dataset[DATASET_KEY]) {
-        const newId = `${Math.random()}`;
+        const newId = `${getNewId()}`;
         el.dataset[DATASET_KEY] = newId;
       }
       const animateGridId = el.dataset[DATASET_KEY] as string;
