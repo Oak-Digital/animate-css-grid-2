@@ -12,7 +12,6 @@ import {
   linear,
 } from '@popmotion/easing';
 import sync from 'framesync';
-// @ts-ignore
 import throttle from 'lodash/throttle';
 import { tween } from 'popmotion';
 import {

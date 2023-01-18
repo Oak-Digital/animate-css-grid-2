@@ -1,12 +1,12 @@
-import { wrapGrid } from '../src/index.ts';
+import { wrapGrid } from '../src/index';
 
-const grid = document.querySelector('.grid');
+const grid: HTMLElement = document.querySelector('.grid')!;
 
 document
-  .querySelector('.js-toggle-grid')
+  .querySelector('.js-toggle-grid')!
   .addEventListener('click', () => grid.classList.toggle('grid--full'));
 
-document.querySelector('.js-add-card').addEventListener('click', () => {
+document.querySelector('.js-add-card')!.addEventListener('click', () => {
   const randomNumber = Math.floor(Math.random() * 5) + 1;
   grid.insertAdjacentHTML(
     'beforeend',
@@ -22,25 +22,25 @@ document.querySelector('.js-add-card').addEventListener('click', () => {
   );
 });
 
-grid.addEventListener('click', ev => {
-  let target = ev.target;
-  while (target.tagName !== 'HTML') {
+grid.addEventListener('click', (ev) => {
+  let target = <HTMLElement>ev.target;
+  while (target !== document.body) {
     if (target.classList.contains('card')) {
       target.classList.toggle('card--expanded');
       return;
     }
-    target = target.parentElement;
+    target = <HTMLElement>target.parentElement;
   }
 });
 
 const { unwrapGrid: uwg } = wrapGrid(grid, {
   easing: 'backOut',
-  onStart: els =>
-    els.forEach(el => {
+  onStart: (els) =>
+    els.forEach((el) => {
       console.log('foo');
       el.classList.add('big');
     }),
-  onEnd: els => els.forEach(el => el.classList.add('small')),
+  onEnd: (els) => els.forEach((el) => el.classList.add('small')),
 });
 
 uwg();
@@ -48,42 +48,42 @@ console.log('unwrapped');
 
 const { unwrapGrid } = wrapGrid(grid, {
   easing: 'backOut',
-  onStart: els =>
-  els.forEach(el => {
-    console.log('onstart');
-    el.classList.add('big');
-  }),
-  onEnd: els => {
-    els.forEach(el => el.classList.add('small'));
+  onStart: (els) =>
+    els.forEach((el) => {
+      console.log('onstart');
+      el.classList.add('big');
+    }),
+  onEnd: (els) => {
+    els.forEach((el) => el.classList.add('small'));
     console.log('onend');
   },
 });
 
 document
   .querySelector('.js-remove-listener')
-  .addEventListener('click', unwrapGrid);
+  ?.addEventListener('click', unwrapGrid);
 
 // // ========================================================
 // // accordion test
 // // ========================================================
 
-const subjects = document.querySelector('.subjects');
+const subjects = document.querySelector<HTMLElement>('.subjects')!;
 
 // animate the grid
-const { unwrapGridSubjects } = wrapGrid(subjects, { easing: 'linear' });
+const { unwrapGrid: unwrapGridSubjects } = wrapGrid(subjects, { easing: 'linear' });
 
 // add a click handler
-subjects.addEventListener('click', ev => {
-  [...document.querySelectorAll('.subject')].forEach(el =>
+subjects.addEventListener('click', (ev) => {
+  [...document.querySelectorAll('.subject')].forEach((el) =>
     el.classList.remove('subject--active')
   );
-  let target = ev.target;
-  while (target.tagName !== 'HTML') {
+  let target = <HTMLElement>ev.target;
+  while (target !== document.body) {
     if (target.classList.contains('subject')) {
       target.classList.toggle('subject--active');
       return;
     }
-    target = target.parentElement;
+    target = target.parentElement!;
   }
 });
 
@@ -95,7 +95,7 @@ const changeGrid = document.querySelector('.grid-children-change');
 const { unwrapChangeGrid, forceGridAnimation } = wrapGrid(changeGrid);
 
 const updateContents = () => {
-  [...changeGrid.querySelectorAll('.card')].forEach(el => {
+  [...changeGrid.querySelectorAll('.card')].forEach((el) => {
     const width = Math.random() * 300;
     const height = Math.random() * 200;
     const inner = el.querySelector('.card__inner');
@@ -111,7 +111,7 @@ setInterval(updateContents, 2000);
 // nested grid
 // ========================================================
 
-const addCard = container => i => {
+const addCard = (container) => (i) => {
   const randomNumber = Math.floor(Math.random() * 5) + 1;
   container.insertAdjacentHTML(
     'beforeend',
@@ -123,19 +123,19 @@ const addCard = container => i => {
   );
 };
 
-const nestedGrid = document.querySelector('.nested-grid');
+const nestedGrid = document.querySelector<HTMLElement>('.nested-grid')!;
 [...Array(400).keys()].forEach(addCard(nestedGrid));
 
 wrapGrid(nestedGrid, { duration: 300 });
 
-nestedGrid.addEventListener('click', ev => {
-  let target = ev.target;
-  while (target.tagName !== 'HTML') {
+nestedGrid.addEventListener('click', (ev) => {
+  let target = <HTMLElement>ev.target;
+  while (target !== document.body) {
     if (target.classList.contains('card')) {
       target.classList.toggle('card--expanded');
       return;
     }
-    target = target.parentElement;
+    target = target.parentElement!;
   }
 });
 
@@ -143,23 +143,23 @@ nestedGrid.addEventListener('click', ev => {
 // hidden cards grid
 // ========================================================
 
-const hiddenCardGrid = document.querySelector('.hidden-cards-grid');
+const hiddenCardGrid = document.querySelector<HTMLElement>('.hidden-cards-grid');
 
 document
   .querySelector('.js-toggle-grid')
-  .addEventListener('click', () =>
-    hiddenCardGrid.classList.toggle('grid--full')
+  ?.addEventListener('click', () =>
+    hiddenCardGrid?.classList.toggle('grid--full')
   );
 
-document.querySelector('.js-hide-button').addEventListener('click', () => {
-  [...hiddenCardGrid.querySelectorAll('.card')].forEach(el =>
+document.querySelector('.js-hide-button')?.addEventListener('click', () => {
+  [...hiddenCardGrid?.querySelectorAll('.card') ?? []].forEach((el) =>
     el.classList.remove('card--hidden')
   );
 });
 
-document.querySelector('.js-add-card').addEventListener('click', () => {
+document.querySelector('.js-add-card')?.addEventListener('click', () => {
   const randomNumber = Math.floor(Math.random() * 5) + 1;
-  hiddenCardGrid.insertAdjacentHTML(
+  hiddenCardGrid?.insertAdjacentHTML(
     'beforeend',
     `
       <div class="card card--${randomNumber}">
@@ -173,30 +173,30 @@ document.querySelector('.js-add-card').addEventListener('click', () => {
   );
 });
 
-hiddenCardGrid.addEventListener('click', ev => {
-  let target = ev.target;
-  while (target.tagName !== 'HTML') {
+hiddenCardGrid?.addEventListener('click', (ev) => {
+  let target = <HTMLElement>ev.target;
+  while (target !== document.body) {
     if (target.classList.contains('card')) {
       target.classList.toggle('card--hidden');
       return;
     }
-    target = target.parentElement;
+    target = target.parentElement!;
   }
 });
 
-wrapGrid(hiddenCardGrid, { stagger: 20, easing: 'backOut', duration: 10000 });
+wrapGrid(hiddenCardGrid!, { stagger: 20, easing: 'backOut', duration: 10000 });
 
 // scroll test
 
-const scrollTest = document.querySelector('.scroll-example');
-scrollTest.addEventListener('click', () => {
+const scrollTest = document.querySelector<HTMLElement>('.scroll-example');
+scrollTest?.addEventListener('click', () => {
   const children = scrollTest.children;
   const reversed = [...children].reverse();
   scrollTest.innerHTML = '';
-  reversed.forEach(c => {
+  reversed.forEach((c) => {
     scrollTest.appendChild(c);
   });
 });
-wrapGrid(scrollTest, {
+wrapGrid(scrollTest!, {
   duration: 2000,
 });
