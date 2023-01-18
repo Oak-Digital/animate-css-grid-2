@@ -290,7 +290,7 @@ export const wrapGrid = (
             firstChild.style.transformOrigin = '0 0';
           }
 
-          let cachedResolve = () => {};
+          let cachedResolve: (value?: any) => void = () => {};
 
           const completionPromise = new Promise(resolve => {
             cachedResolve = resolve;
@@ -312,7 +312,7 @@ export const wrapGrid = (
                 // this helps prevent layout thrashing
                 sync.postRender(() => recordPositions([el]));
               },
-              complete: cachedResolve,
+              complete: () => cachedResolve(),
             });
             itemPosition.stopTween = stop;
           };
