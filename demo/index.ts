@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
       els.forEach((el) => el.classList.add('small'));
       /* console.log('onend'); */
     },
-    elementsIgnored: [gridIgnoreElement],
+    /* elementsIgnored: [gridIgnoreElement], */
   });
 
   document
