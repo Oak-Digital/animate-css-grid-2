@@ -77,48 +77,50 @@ document.addEventListener('DOMContentLoaded', () => {
   // // fade test
   // // ========================================================
 
-  /* const gridFade = document.querySelector<HTMLElement>('.grid-fade')!; */
-  /**/
-  /* const { extractChild, unExtractChild } = wrapGrid(gridFade, {}); */
-  /**/
-  /* const gridFadeCard = document.querySelector<HTMLElement>( */
-  /*   '.grid-fade .card--2' */
-  /* )!; */
-  /* let expanded = true; */
-  /* gridFade.addEventListener('click', (ev) => { */
-  /*   if (expanded) { */
-  /*     gridFadeCard.style.display = 'block'; */
-  /*     extractChild(gridFadeCard); */
-  /*     tween({ */
-  /*       from: 1, */
-  /*       to: 0, */
-  /*       duration: 500, */
-  /*     }).start({ */
-  /*       update: (v: any) => { */
-  /*         gridFadeCard.style.opacity = `${v}`; */
-  /*       }, */
-  /*       complete: () => { */
-  /*         gridFadeCard.style.display = 'none'; */
-  /*       }, */
-  /*     }); */
-  /*   } else { */
-  /*     gridFadeCard.style.display = 'block'; */
-  /*     unExtractChild(gridFadeCard); */
-  /*     tween({ */
-  /*       from: 0, */
-  /*       to: 1, */
-  /*       duration: 500, */
-  /*     }).start({ */
-  /*       update: (v: any) => { */
-  /*         gridFadeCard.style.opacity = `${v}`; */
-  /*       }, */
-  /*       complete: () => { */
-  /*         gridFadeCard.style.display = 'block'; */
-  /*       }, */
-  /*     }); */
-  /*   } */
-  /*   expanded = !expanded; */
-  /* }); */
+  const gridFade = document.querySelector<HTMLElement>('.grid-fade')!;
+
+  const agFade = new AnimateCSSGrid(gridFade, {
+    easing: 'backOut',
+  });
+
+  const gridFadeCard = document.querySelector<HTMLElement>(
+    '.grid-fade .card--2'
+  )!;
+  let expanded = true;
+  gridFade.addEventListener('click', (ev) => {
+    if (expanded) {
+      gridFadeCard.style.display = 'block';
+      agFade.extractChild(gridFadeCard);
+      tween({
+        from: 1,
+        to: 0,
+        duration: 500,
+      }).start({
+        update: (v: any) => {
+          gridFadeCard.style.opacity = `${v}`;
+        },
+        complete: () => {
+          gridFadeCard.style.display = 'none';
+        },
+      });
+    } else {
+      gridFadeCard.style.display = 'block';
+      agFade.unExtractChild(gridFadeCard);
+      tween({
+        from: 0,
+        to: 1,
+        duration: 500,
+      }).start({
+        update: (v: any) => {
+          gridFadeCard.style.opacity = `${v}`;
+        },
+        complete: () => {
+          gridFadeCard.style.display = 'block';
+        },
+      });
+    }
+    expanded = !expanded;
+  });
 
   // // ========================================================
   // // accordion test

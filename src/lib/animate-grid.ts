@@ -115,12 +115,20 @@ export class AnimateCSSGrid {
 
   public extractChild(child: HTMLElement | AnimateCSSGridItem) {
     const childItem = this.findChildItem(child);
-    return childItem.extract();
+    const result = childItem.extract();
+    if (result) {
+      this.forceGridAnimation();
+    }
+    return result;
   }
 
   public unExtractChild(child: HTMLElement | AnimateCSSGridItem) {
     const childItem = this.findChildItem(child);
-    return childItem.unExtract();
+    const result = childItem.unExtract();
+    if (result) {
+      this.forceGridAnimation();
+    }
+    return result;
   }
 
   public destroy() {

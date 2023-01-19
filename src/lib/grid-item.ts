@@ -92,18 +92,24 @@ export class AnimateCSSGridItem {
       return false;
     }
     this.isExtracted = true;
+    const coords = this.getPositionCoords();
+    console.log(coords);
+    applyCoordTransform(this.element, coords, { immediate: true });
     this.element.style.position = 'absolute';
 
-    return true;
+    return this;
   }
 
-  public unExtract() {
+  public unExtract(resetCoords: boolean = true) {
     if (!this.isExtracted) {
       return false;
     }
     this.isExtracted = false;
     this.element.style.position = '';
-    return true;
+    if (resetCoords) {
+      this.resetTransforms();
+    }
+    return this;
   }
 
   // this must be called before calling startAnimation
@@ -128,10 +134,7 @@ export class AnimateCSSGridItem {
     /*   gridRectArg ?? this.animateGrid.getGridBoundingClientRect(); */
     // do not animate if boundingClientRect is the same as the position data since that means they haven't moved
 
-    const itemGridRect = getGridAwareBoundingClientRect(
-      gridBoundingClientRect,
-      this.element
-    );
+    const itemGridRect = this.getItemGridRect(gridBoundingClientRect);
 
     const itemRect = this.positionData.rect;
 
@@ -156,12 +159,7 @@ export class AnimateCSSGridItem {
     const firstChild = this.element.children[0] as HTMLElement;
     /* firstChild.style.transform = ''; */
 
-    const coords: Coords = {
-      scaleX: itemRect.width / itemGridRect.width,
-      scaleY: itemRect.height / itemGridRect.height,
-      translateX: itemRect.left - itemGridRect.left,
-      translateY: itemRect.top - itemGridRect.top,
-    };
+    const coords: Coords = this.calculateFromCoords();
 
     this.element.style.transformOrigin = '0 0';
     /* if (firstChild && childLeft === left && childTop === top) { */
@@ -174,6 +172,39 @@ export class AnimateCSSGridItem {
     this.currentFromCoords = coords;
 
     return true;
+  }
+
+  public getItemGridRect(gridRect?: DOMRect) {
+    const gridBoundingClientRect =
+      gridRect ?? this.animateGrid.getGridBoundingClientRect();
+
+    const itemGridRect = getGridAwareBoundingClientRect(
+      gridBoundingClientRect,
+      this.element
+    );
+
+    return itemGridRect;
+  }
+
+  public calculateFromCoords(): Coords {
+    const itemGridRect = this.getItemGridRect();
+    const itemRect = this.positionData.rect;
+    return {
+      scaleX: itemRect.width / itemGridRect.width,
+      scaleY: itemRect.height / itemGridRect.height,
+      translateX: itemRect.left - itemGridRect.left,
+      translateY: itemRect.top - itemGridRect.top,
+    };
+  }
+
+  public getPositionCoords(): Coords {
+    const itemRect = this.positionData.rect;
+    return {
+      scaleX: 1,
+      scaleY: 1,
+      translateX: itemRect.left,
+      translateY: itemRect.top,
+    };
   }
 
   public async startAnimation(
@@ -226,7 +257,10 @@ export class AnimateCSSGridItem {
     this.stopAnimationFunction = () => {};
   }
 
-  public resetTransforms() {
+  public resetTransforms(force: boolean = false) {
+    if (!force && this.isExtracted) {
+      return;
+    }
     this.element.style.transform = '';
     const firstChild = this.element.children[0] as HTMLElement;
     if (firstChild) {
