@@ -38,8 +38,10 @@
   },
   "dependencies": {
     "@popmotion/easing": "^1.0.2",
+    "eventemitter3": "^5.0.0",
     "framesync": "^6.1.2",
     "lodash": "^4.17.21",
-    "popmotion": "^8.5.5"
+    "popmotion": "^8.5.5",
+    "wait": "^0.4.2"
   }
 }

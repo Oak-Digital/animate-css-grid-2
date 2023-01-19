@@ -1,8 +1,10 @@
+export * from './lib/animate-grid';
+export * from './lib/grid-item';
 import sync from 'framesync';
 import throttle from 'lodash/throttle';
 import { tween } from 'popmotion';
 import { arraylikeToArray } from './lib/arrays';
-import { DATASET_KEY } from './lib/constants';
+import { DATASET_ID_KEY } from './lib/constants';
 import { popmotionEasing } from './lib/easings';
 import { applyCoordTransform, getGridAwareBoundingClientRect } from './lib/grid';
 import {
@@ -56,11 +58,11 @@ export const wrapGrid = (
       if (typeof el.getBoundingClientRect !== 'function') {
         return;
       }
-      if (!el.dataset[DATASET_KEY]) {
+      if (!el.dataset[DATASET_ID_KEY]) {
         const newId = `${getNewId()}`;
-        el.dataset[DATASET_KEY] = newId;
+        el.dataset[DATASET_ID_KEY] = newId;
       }
-      const animateGridId = el.dataset[DATASET_KEY] as string;
+      const animateGridId = el.dataset[DATASET_ID_KEY] as string;
 
       if (!cachedPositionData[animateGridId]) {
         cachedPositionData[animateGridId] = {} as ItemPosition;
@@ -96,7 +98,7 @@ export const wrapGrid = (
   // such that it's in the same place as it was before
   const extractChild = (el: HTMLElement) => {
     const isExtracted = extractedChildren.some(
-      (child) => child.dataset[DATASET_KEY] === el.dataset[DATASET_KEY]
+      (child) => child.dataset[DATASET_ID_KEY] === el.dataset[DATASET_ID_KEY]
     );
     if (isExtracted) {
       return;
@@ -109,7 +111,7 @@ export const wrapGrid = (
 
   const unExtractChild = (el: HTMLElement) => {
     const extractedIndex = extractedChildren.findIndex(
-      (child) => child.dataset[DATASET_KEY] === el.dataset[DATASET_KEY]
+      (child) => child.dataset[DATASET_ID_KEY] === el.dataset[DATASET_ID_KEY]
     );
     if (extractedIndex === -1) {
       return;
@@ -139,10 +141,12 @@ export const wrapGrid = (
     const gridBoundingClientRect = container.getBoundingClientRect();
     const childrenElements = arraylikeToArray(container.children) as HTMLElement[];
     // stop current transitions and remove transforms on transitioning elements
+    
+    // start reset transforms
     childrenElements
       .filter((el) => {
         const itemPosition =
-          cachedPositionData[el.dataset[DATASET_KEY] as string];
+          cachedPositionData[el.dataset[DATASET_ID_KEY] as string];
         if (itemPosition && itemPosition.stopTween) {
           itemPosition.stopTween();
           delete itemPosition.stopTween;
@@ -157,6 +161,9 @@ export const wrapGrid = (
           firstChild.style.transform = '';
         }
       });
+    // end reset transforms
+
+    // start filter elements that haven't moved
     const animatedGridChildren = childrenElements
       .map((el) => ({
         childCoords: {} as ChildBoundingClientRect,
@@ -168,7 +175,7 @@ export const wrapGrid = (
       }))
       .filter(({ el, boundingClientRect }) => {
         const itemPosition =
-          cachedPositionData[el.dataset[DATASET_KEY] as string];
+          cachedPositionData[el.dataset[DATASET_ID_KEY] as string];
         // don't animate the initial appearance of elements,
         // just cache their position so they can be animated later
         if (!itemPosition) {
@@ -185,6 +192,7 @@ export const wrapGrid = (
         }
         return true;
       });
+    // end filter elements that haven't moved
 
     // having more than one child in the animated item is not supported
     animatedGridChildren.forEach(({ el }) => {
@@ -228,7 +236,7 @@ export const wrapGrid = (
         ) => {
           const firstChild = el.children[0] as HTMLElement;
           const itemPosition =
-            cachedPositionData[el.dataset[DATASET_KEY] as string];
+            cachedPositionData[el.dataset[DATASET_ID_KEY] as string];
           const coords: Coords = {
             scaleX: itemPosition.rect.width / width,
             scaleY: itemPosition.rect.height / height,
@@ -253,11 +261,11 @@ export const wrapGrid = (
           // now start the animation
           const isIgnored = elementsIgnored.some(
             (ignoredEl) =>
-              el.dataset[DATASET_KEY] === ignoredEl.dataset[DATASET_KEY]
+              el.dataset[DATASET_ID_KEY] === ignoredEl.dataset[DATASET_ID_KEY]
           );
           const isExtracted = extractedChildren.some(
             (extractedEl) =>
-              el.dataset[DATASET_KEY] === extractedEl.dataset[DATASET_KEY]
+              el.dataset[DATASET_ID_KEY] === extractedEl.dataset[DATASET_ID_KEY]
           );
 
           const finalCoords = {

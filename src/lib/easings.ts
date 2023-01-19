@@ -26,4 +26,8 @@ export const popmotionEasing: PopmotionEasing = {
   easeInOut,
   easeOut,
   linear,
-};
+} as const;
+
+export const isPopmotionEasing = (easing: string): easing is keyof PopmotionEasing => {
+  return easing in popmotionEasing;
+}
