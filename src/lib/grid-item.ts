@@ -34,6 +34,7 @@ export class AnimateCSSGridItem {
   public positionData: ItemPosition;
 
   private childRect: BoundingClientRect | null = null;
+  private currentFromCoords: Coords | null = null;
   private stopAnimationFunction = () => {};
   private eventEmitter = new EventEmitter<
     | AnimateCSSGridEvents.ITEM_START
@@ -82,29 +83,18 @@ export class AnimateCSSGridItem {
 
     const child = this.element.children[0] as HTMLElement;
 
-    if (!child) {
-      return false;
-    }
-    const rect = getGridAwareBoundingClientRect(gridBoundingClientRect, child);
-    this.childRect = rect;
+    /* if (!child) { */
+    /*   return false; */
+    /* } */
+    /* const rect = getGridAwareBoundingClientRect(gridBoundingClientRect, child); */
+    /* this.childRect = rect; */
 
-    return true;
-  }
-
-  public async startAnimation(
-    {
-      delay = 0,
-      easing = 'easeInOut',
-      duration = 250,
-    }: StartAnimationArguments,
-    gridRectArg?: DOMRect
-  ) {
-    const gridRect =
-      gridRectArg ?? this.animateGrid.getGridBoundingClientRect();
+    /* const gridRect = */
+    /*   gridRectArg ?? this.animateGrid.getGridBoundingClientRect(); */
     // do not animate if boundingClientRect is the same as the position data since that means they haven't moved
 
     const itemGridRect = getGridAwareBoundingClientRect(
-      gridRect,
+      gridBoundingClientRect,
       this.element
     );
 
@@ -118,9 +108,6 @@ export class AnimateCSSGridItem {
     ) {
       return false;
     }
-    if (this.childRect === null) {
-      return false;
-    }
 
     // having more than one child in the animated item is not supported
     if (arraylikeToArray(this.element.children).length > 1) {
@@ -132,7 +119,7 @@ export class AnimateCSSGridItem {
     this.eventEmitter.emit(AnimateCSSGridEvents.ITEM_START, this);
 
     const firstChild = this.element.children[0] as HTMLElement;
-    firstChild.style.transform = '';
+    /* firstChild.style.transform = ''; */
 
     const coords: Coords = {
       scaleX: itemRect.width / itemGridRect.width,
@@ -146,15 +133,32 @@ export class AnimateCSSGridItem {
       /* firstChild.style.transformOrigin = '0 0'; */
     /* } */
 
+    // this needs to happen imidiately so that the element is in the correct position before the animation starts
     applyCoordTransform(this.element, coords, { immediate: true });
+
+    this.currentFromCoords = coords;
+
+    return true;
+  }
+
+  public async startAnimation(
+    {
+      delay = 0,
+      easing = 'easeInOut',
+      duration = 250,
+    }: StartAnimationArguments
+  ) {
 
     if (delay > 0) {
       await wait(delay);
     }
 
     const completionPromise = new Promise<void>((resolve, reject) => {
-      tween({
-        from: coords,
+      if (this.element.classList.contains('card--1')) {
+        /* debugger */
+      }
+      const { stop } = tween({
+        from: this.currentFromCoords ?? baseCoords,
         to: baseCoords,
         duration,
         ease: popmotionEasing[easing],
@@ -171,6 +175,8 @@ export class AnimateCSSGridItem {
           reject(err);
         },
       });
+
+      this.stopAnimationFunction = stop;
     });
 
     await completionPromise;
@@ -178,6 +184,19 @@ export class AnimateCSSGridItem {
     this.eventEmitter.emit(AnimateCSSGridEvents.ITEM_END, this);
 
     return true;
+  }
+
+  public stopAnimation() {
+    this.stopAnimationFunction();
+    this.stopAnimationFunction = () => {};
+  }
+
+  public resetTransforms() {
+    this.element.style.transform = '';
+    const firstChild = this.element.children[0] as HTMLElement;
+    if (firstChild) {
+      firstChild.style.transform = '';
+    }
   }
 
   protected getPositionData(gridRect?: DOMRect) {

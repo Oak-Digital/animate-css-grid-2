@@ -46,11 +46,11 @@ document.addEventListener('DOMContentLoaded', () => {
   ag.on(AnimateCSSGridEvents.START, (els: AnimateCSSGridItem[]) => {
     els.forEach((el) => {
       /* console.log('foo'); */
-      /* el.element.classList.add('big'); */
+      el.element.classList.add('big');
     });
   });
   ag.on(AnimateCSSGridEvents.END, (els: AnimateCSSGridItem[]) => {
-    /* els.forEach((el) => el.element.classList.add('small')); */
+    els.forEach((el) => el.element.classList.add('small'));
   });
 
   ag.destroy();

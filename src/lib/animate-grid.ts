@@ -23,11 +23,12 @@ export class AnimateCSSGrid {
 
   constructor(
     element: HTMLElement,
-    { duration = 250, stagger = 0 }: AnimateCSSGridOptions = {}
+    { duration = 250, stagger = 0, easing = 'easeInOut' }: AnimateCSSGridOptions = {}
   ) {
     this.element = element;
     this.duration = duration;
     this.stagger = stagger;
+    this.easing = easing;
 
     this.setResizeListener();
     this.setResizeListener();
@@ -46,7 +47,12 @@ export class AnimateCSSGrid {
     this.gridItems = Array.from(this.element.children).map((child) => {
       const id = this.getNewId();
       // assume the child is an HTML element or else 💀
-      const gridItem = new AnimateCSSGridItem(this, child as HTMLElement, id, rect);
+      const gridItem = new AnimateCSSGridItem(
+        this,
+        child as HTMLElement,
+        id,
+        rect
+      );
 
       // setup event listeners
       const eventNames = gridItemEventNames.forEach((name) => {
@@ -98,6 +104,7 @@ export class AnimateCSSGrid {
 
   public destroy() {
     // remove mutation observer
+    this.observer.disconnect();
 
     // remove window resize and scroll listener
     this.removeEventResizeListener();
@@ -114,7 +121,6 @@ export class AnimateCSSGrid {
   protected getNewId() {
     return this.idCounter++;
   }
-
 
   public forceGridAnimation() {
     this.mutationCallback('forceGridAnimation');
@@ -137,27 +143,31 @@ export class AnimateCSSGrid {
       if (this.mutationsDisabled) return;
     }
 
-    console.log('callback whut?')
-
     // stop animation and reset transforms of items
     // TODO: we can probably change this, such that the animations look more smooth
-    /* this.gridItems.forEach((gridItem) => gridItem.stopAnimation()); */
+    this.gridItems.forEach((gridItem) => {
+      gridItem.stopAnimation();
+      gridItem.resetTransforms();
+    });
 
     // prepare animation of children by getting their child coordinates
     // this will prevent the grid from jumping around
-    const affectedItems = this.gridItems.filter((gridItem) => gridItem.prepareAnimation());
+    const affectedItems = this.gridItems.filter((gridItem) =>
+      gridItem.prepareAnimation()
+    );
 
     await this.disableMutationsWhileFunctionRuns(() => {
       // call on start
       this.eventEmitter.emit(AnimateCSSGridEvents.START, affectedItems);
     });
 
-
     // start animation for children
     await Promise.allSettled(
       this.gridItems.map((gridItem, i) => {
         return gridItem.startAnimation({
           delay: i * this.stagger,
+          duration: this.duration,
+          easing: this.easing,
         });
       })
     );
