@@ -33,6 +33,7 @@ export class AnimateCSSGridItem {
   public readonly animateGrid: AnimateCSSGrid;
   public positionData: ItemPosition;
 
+  private _isExtracted = false;
   private childRect: BoundingClientRect | null = null;
   private currentFromCoords: Coords | null = null;
   private stopAnimationFunction = () => {};
@@ -62,6 +63,14 @@ export class AnimateCSSGridItem {
     this.positionData = this.getPositionData(gridRect);
   }
 
+  public get isExtracted() {
+    return this._isExtracted;
+  }
+
+  private set isExtracted(value: boolean) {
+    this._isExtracted = value;
+  }
+
   // these functions should be bound to have the correct this reference
   public get on() {
     return this.eventEmitter.on.bind(this.eventEmitter);
@@ -75,8 +84,34 @@ export class AnimateCSSGridItem {
     return this.eventEmitter.off.bind(this.eventEmitter);
   }
 
+  // extracting means that the user can gain control over the element
+  // by setting the elements positioning to absolute and allowing the grid to
+  // reorder the other elements
+  public extract() {
+    if (this.isExtracted) {
+      return false;
+    }
+    this.isExtracted = true;
+    this.element.style.position = 'absolute';
+
+    return true;
+  }
+
+  public unExtract() {
+    if (!this.isExtracted) {
+      return false;
+    }
+    this.isExtracted = false;
+    this.element.style.position = '';
+    return true;
+  }
+
   // this must be called before calling startAnimation
   public prepareAnimation(gridRect?: DOMRect) {
+    // if the element is extracted it should not be affected by the grid
+    if (this.isExtracted) {
+      return false;
+    }
     /* measure child element */
     const gridBoundingClientRect =
       gridRect ?? this.animateGrid.getGridBoundingClientRect();

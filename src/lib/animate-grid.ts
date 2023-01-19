@@ -102,6 +102,27 @@ export class AnimateCSSGrid {
     this.gridItems.forEach((gridItem) => gridItem.recordPosition());
   }
 
+  public findChildItem(child: HTMLElement | AnimateCSSGridItem) {
+    if (child instanceof AnimateCSSGridItem) {
+      return child;
+    }
+    const childItem = this.gridItems.find((item) => item.element === child);
+    if (!childItem) {
+      throw new Error('Child not found');
+    }
+    return childItem;
+  }
+
+  public extractChild(child: HTMLElement | AnimateCSSGridItem) {
+    const childItem = this.findChildItem(child);
+    return childItem.extract();
+  }
+
+  public unExtractChild(child: HTMLElement | AnimateCSSGridItem) {
+    const childItem = this.findChildItem(child);
+    return childItem.unExtract();
+  }
+
   public destroy() {
     // remove mutation observer
     this.observer.disconnect();
