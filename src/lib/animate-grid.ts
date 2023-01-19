@@ -163,7 +163,7 @@ export class AnimateCSSGrid {
 
     // start animation for children
     await Promise.allSettled(
-      this.gridItems.map((gridItem, i) => {
+      affectedItems.map((gridItem, i) => {
         return gridItem.startAnimation({
           delay: i * this.stagger,
           duration: this.duration,
