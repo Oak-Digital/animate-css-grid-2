@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
     );
   });
 
-  document.querySelector('.js-add-card')?.addEventListener('click', () => {
+  document.querySelector('.hidden-test.js-add-card')?.addEventListener('click', () => {
     const randomNumber = Math.floor(Math.random() * 5) + 1;
     hiddenCardGrid?.insertAdjacentHTML(
       'beforeend',
