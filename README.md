@@ -40,21 +40,10 @@ ES6 Module:
 `yarn add animate-css-grid` or `npm install animate-css-grid`
 
 ```js
-import { wrapGrid } from 'animate-css-grid'
+import { AnimateCSSGrid } from 'animate-css-grid'
 
 const grid = document.querySelector(".grid");
-wrapGrid(grid);
-```
-
-Or from a script tag:
-
-```html
-<script src="https://unpkg.com/animate-css-grid@latest"></script>
-
-<script>
-  const grid = document.querySelector(".grid");
-  animateCSSGrid.wrapGrid(grid, {duration : 600});
-</script>
+const ag = new AnimateCSSGrid(grid)
 ```
 
 Optional config object:
@@ -67,11 +56,6 @@ Optional config object:
   duration: 500
   // string: default is 'easeInOut'
   easing: 'backInOut',
-  // function: called with list of elements about to animate
-  onStart: (animatingElementList)=> {},
-  // function: called with list of elements that just finished animating
-  // cancelled animations will not trigger onEnd
-  onEnd: (animatingElementList)=> {}
 }
 ```
 
@@ -85,21 +69,44 @@ Available easing functions:
 
 [Learn more about available easing functions here.](https://popmotion.io/api/easing/)
 
-Two functions are returned by the `wrapGrid` call that you probably won't need to use:
+The `AnimateCSSGrid` instance gives you access to the following methods and fields
 
 ```js
-import { wrapGrid } from animateCSSGrid
+// listen for events
+ag.on(eventName, yourFunction)
+// listen for eventName, but only once
+ag.once(eventName, yourFunction)
+// remove event listener
+ag.off(eventName, yourFunction)
 
-const grid = document.querySelector(".grid");
-const { unwrapGrid, forceGridAnimation } = wrapGrid(grid);
+// takes the html element out of the grid with position absolute
+// and let's you do what you want with it, for example fading it out
+ag.extractChild(HTMLElement)
 
-// if you want the grid to transition after updating an inline style
-// you need to call forceGridAnimation
-grid.style.width = '500px'
-forceGridAnimation()
+// removes position absolute from the child, so it can be part of the grid again
+ag.unExtractChild(HTMLElement)
 
-// if you want to remove animations but not the grid itself
-unwrapGrid()
+// force a grid animation - do this if you only change styles
+// or something else that does not trigger the animation
+ag.forceGridAnimation()
+
+// removes all event listeners and the animations will no longer work
+ag.destroy()
+```
+
+### Events
+
+These are the event types. If you use typescript you should use the provided enum (AnimateCSSGridEvents ).
+
+```js
+ag.on('start', (affectedElements) => {})
+ag.on('end', (affectedElements) => {})
+ag.on('beforeDestroy', () => {})
+ag.on('afterDestroy', () => {})
+ag.on('itemStart', (item) => {})
+ag.on('itemEnd', (item) => {})
+ag.on('itemBeforeDestroy', (item) => {})
+ag.on('itemAfterDestroy', (item) => {})
 ```
 
 ## Requirements
@@ -134,3 +141,8 @@ It should work on container elements without CSS grid applied as well, but was d
 The `animate-css-grid` library can easily be used with frameworks like React or Vue.
 
 Check out the [React example](https://codepen.io/aholachek/pen/mxwvmV) or the [Vue example](https://codepen.io/sustained/pen/Rwbdgob) on Codepen!
+
+## Roadmap
+
+- [ ] ability to animate width and height of elements, so text doesn't jump, but slowly becomes smaller or larger
+- [ ] option for animating height (and width) of the grid, so it looks more natural. Instead of scaling.
