@@ -146,3 +146,10 @@ Check out the [React example](https://codepen.io/aholachek/pen/mxwvmV) or the [V
 
 - [ ] ability to animate width and height of elements, so text doesn't jump, but slowly becomes smaller or larger
 - [ ] option for animating height (and width) of the grid, so it looks more natural. Instead of scaling.
+
+## Publishing
+
+```
+pnpm run build
+pnpm publish
+```
