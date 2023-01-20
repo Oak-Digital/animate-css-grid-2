@@ -1,6 +1,13 @@
-import sync from "framesync";
-import { Coords } from "../types";
-import { BoundingClientRect } from "../types/rect";
+import sync from 'framesync';
+import { Coords } from '../types';
+import { BoundingClientRect } from '../types/rect';
+
+export const baseCoords: Coords = {
+  translateX: 0,
+  translateY: 0,
+  scaleX: 1,
+  scaleY: 1,
+};
 
 // in order to account for scroll, (which we're not listening for)
 // always cache the item's position relative

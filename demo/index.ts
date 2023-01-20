@@ -1,5 +1,7 @@
-import { wrapGrid } from '../src/index';
+import { AnimateCSSGrid, AnimateCSSGridItem } from '../src/index';
 import { tween } from 'popmotion';
+import { AnimateCSSGridEvents } from '../src/types';
+import { arraylikeToArray } from '../src/lib/arrays';
 
 document.addEventListener('DOMContentLoaded', () => {
   const grid: HTMLElement = document.querySelector('.grid')!;
@@ -35,46 +37,52 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  const gridIgnoreElement =
-    document.querySelector<HTMLElement>('.grid .card--2')!;
-  console.log(gridIgnoreElement);
-  const { unwrapGrid: uwg } = wrapGrid(grid, {
+  /* const gridIgnoreElement = */
+  /*   document.querySelector<HTMLElement>('.grid .card--2')!; */
+  /* console.log(gridIgnoreElement); */
+  const ag = new AnimateCSSGrid(grid, {
     easing: 'backOut',
-    onStart: (els) =>
-      els.forEach((el) => {
-        console.log('foo');
-        el.classList.add('big');
-      }),
-    onEnd: (els) => els.forEach((el) => el.classList.add('small')),
   });
 
-  uwg();
+  ag.on(AnimateCSSGridEvents.START, (els: AnimateCSSGridItem[]) => {
+    els.forEach((el) => {
+      /* console.log('foo'); */
+      el.element.classList.add('big');
+    });
+  });
+  ag.on(AnimateCSSGridEvents.END, (els: AnimateCSSGridItem[]) => {
+    els.forEach((el) => el.element.classList.add('small'));
+  });
+
+  ag.destroy();
   console.log('unwrapped');
 
-  const { unwrapGrid } = wrapGrid(grid, {
+  const ag2 = new AnimateCSSGrid(grid, {
     easing: 'backOut',
-    onStart: (els) =>
+  });
+
+  ag2.on(AnimateCSSGridEvents.START, (els: AnimateCSSGridItem[]) => {
       els.forEach((el) => {
         /* console.log('onstart'); */
-        el.classList.add('big');
-      }),
-    onEnd: (els) => {
-      els.forEach((el) => el.classList.add('small'));
-      /* console.log('onend'); */
-    },
-    /* elementsIgnored: [gridIgnoreElement], */
+        el.element.classList.add('big');
+      });
+  });
+  ag2.on(AnimateCSSGridEvents.END, (els: AnimateCSSGridItem[]) => {
+    els.forEach((el) => el.element.classList.add('small'));
   });
 
   document
     .querySelector('.js-remove-listener')
-    ?.addEventListener('click', unwrapGrid);
+    ?.addEventListener('click', ag2.destroy);
   // // ========================================================
   // // fade test
   // // ========================================================
 
   const gridFade = document.querySelector<HTMLElement>('.grid-fade')!;
 
-  const { extractChild, unExtractChild } = wrapGrid(gridFade, {});
+  const agFade = new AnimateCSSGrid(gridFade, {
+    easing: 'backOut',
+  });
 
   const gridFadeCard = document.querySelector<HTMLElement>(
     '.grid-fade .card--2'
@@ -83,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
   gridFade.addEventListener('click', (ev) => {
     if (expanded) {
       gridFadeCard.style.display = 'block';
-      extractChild(gridFadeCard);
+      agFade.extractChild(gridFadeCard);
       tween({
         from: 1,
         to: 0,
@@ -98,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     } else {
       gridFadeCard.style.display = 'block';
-      unExtractChild(gridFadeCard);
+      agFade.unExtractChild(gridFadeCard);
       tween({
         from: 0,
         to: 1,
@@ -122,13 +130,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const subjects = document.querySelector<HTMLElement>('.subjects')!;
 
   // animate the grid
-  const { unwrapGrid: unwrapGridSubjects } = wrapGrid(subjects, {
+  const agSubjects = new AnimateCSSGrid(subjects, {
     easing: 'linear',
   });
 
   // add a click handler
   subjects.addEventListener('click', (ev) => {
-    [...document.querySelectorAll('.subject')].forEach((el) =>
+    [...arraylikeToArray(document.querySelectorAll<HTMLElement>('.subject'))].forEach((el) =>
       el.classList.remove('subject--active')
     );
     let target = <HTMLElement>ev.target;
@@ -145,18 +153,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // children change
   // ========================================================
 
-  const changeGrid = document.querySelector('.grid-children-change');
-  const { unwrapChangeGrid, forceGridAnimation } = wrapGrid(changeGrid);
+  const changeGrid = document.querySelector<HTMLElement>('.grid-children-change')!;
+  const agChange = new AnimateCSSGrid(changeGrid);
+
 
   const updateContents = () => {
-    [...changeGrid.querySelectorAll('.card')].forEach((el) => {
+    [...arraylikeToArray(changeGrid.querySelectorAll<HTMLElement>('.card'))].forEach((el) => {
       const width = Math.random() * 300;
       const height = Math.random() * 200;
-      const inner = el.querySelector('.card__inner');
+      const inner = el.querySelector<HTMLElement>('.card__inner')!;
       inner.style.width = `${width}px`;
       inner.style.height = `${height}px`;
     });
-    forceGridAnimation();
+    agChange.forceGridAnimation();
   };
 
   setInterval(updateContents, 2000);
@@ -180,7 +189,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const nestedGrid = document.querySelector<HTMLElement>('.nested-grid')!;
   [...Array(400).keys()].forEach(addCard(nestedGrid));
 
-  wrapGrid(nestedGrid, { duration: 300 });
+  const agNested = new AnimateCSSGrid(nestedGrid, {
+    duration: 300,
+  });
 
   nestedGrid.addEventListener('click', (ev) => {
     let target = <HTMLElement>ev.target;
@@ -198,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ========================================================
 
   const hiddenCardGrid =
-    document.querySelector<HTMLElement>('.hidden-cards-grid');
+    document.querySelector<HTMLElement>('.hidden-cards-grid')!;
 
   document
     .querySelector('.js-toggle-grid')
@@ -207,12 +218,12 @@ document.addEventListener('DOMContentLoaded', () => {
     );
 
   document.querySelector('.js-hide-button')?.addEventListener('click', () => {
-    [...(hiddenCardGrid?.querySelectorAll('.card') ?? [])].forEach((el) =>
+    [...arraylikeToArray(hiddenCardGrid.querySelectorAll<HTMLElement>('.card'))].forEach((el) =>
       el.classList.remove('card--hidden')
     );
   });
 
-  document.querySelector('.js-add-card')?.addEventListener('click', () => {
+  document.querySelector('.hidden-test.js-add-card')?.addEventListener('click', () => {
     const randomNumber = Math.floor(Math.random() * 5) + 1;
     hiddenCardGrid?.insertAdjacentHTML(
       'beforeend',
@@ -239,24 +250,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  wrapGrid(hiddenCardGrid!, {
-    stagger: 20,
+  new AnimateCSSGrid(hiddenCardGrid!, {
+    stagger: 300,
     easing: 'backOut',
-    duration: 10000,
+    duration: 4000,
   });
 
   // scroll test
 
-  const scrollTest = document.querySelector<HTMLElement>('.scroll-example');
+  const scrollTest = document.querySelector<HTMLElement>('.scroll-example')!;
   scrollTest?.addEventListener('click', () => {
     const children = scrollTest.children;
-    const reversed = [...children].reverse();
+    const reversed = [...arraylikeToArray(children)].reverse();
     scrollTest.innerHTML = '';
     reversed.forEach((c) => {
       scrollTest.appendChild(c);
     });
   });
-  wrapGrid(scrollTest!, {
+  new AnimateCSSGrid(scrollTest, {
     duration: 2000,
   });
 });

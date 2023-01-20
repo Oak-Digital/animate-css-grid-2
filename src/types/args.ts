@@ -10,3 +10,17 @@ export interface WrapGridArguments {
   onEnd?: (animatedChildren: HTMLElement[]) => void;
   elementsIgnored?: HTMLElement[];
 }
+
+export interface StartAnimationArguments {
+  duration?: number;
+  stagger?: number;
+  easing?: keyof PopmotionEasing;
+  delay?: number;
+}
+
+export type AnimateCSSGridOptions = {
+  duration?: number;
+  stagger?: number;
+  easing?: keyof PopmotionEasing;
+  autoRegisterChildren?: boolean;
+};
