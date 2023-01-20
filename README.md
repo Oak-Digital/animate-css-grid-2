@@ -145,7 +145,9 @@ It should work on container elements without CSS grid applied as well, but was d
 
 The `animate-css-grid` library can easily be used with frameworks like React or Vue.
 
-Check out the [React example](https://codepen.io/aholachek/pen/mxwvmV) or the [Vue example](https://codepen.io/sustained/pen/Rwbdgob) on Codepen!
+For Vue you can use [`vue-animate-css-grid`](https://github.com/Oak-Digital/vue-animate-css-grid)
+
+Check out the [React example](https://codepen.io/aholachek/pen/mxwvmV)
 
 ## Roadmap
 
