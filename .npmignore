@@ -1,5 +1,6 @@
 node_modules
 demo
+demo-dist
 src
 .gitignore
 .prettierrc
