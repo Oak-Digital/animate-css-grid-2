@@ -114,6 +114,13 @@ export class AnimateCSSGrid {
     });
   }
 
+  public unregisterRemovedGridItems() {
+    const removedGridItems = this.gridItems.filter(
+      (gridItem) => !this.element.contains(gridItem.element)
+    );
+    removedGridItems.forEach((gridItem) => this.unregisterGridItem(gridItem));
+  }
+
   public findChildItem(child: HTMLElement | AnimateCSSGridItem) {
     if (child instanceof AnimateCSSGridItem) {
       return child;
@@ -226,6 +233,7 @@ export class AnimateCSSGrid {
     }
 
     if (this.autoRegisterChildren && addedOrRemoved) {
+      this.unregisterRemovedGridItems();
       this.registerNewGridItems();
     }
 
