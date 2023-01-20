@@ -22,4 +22,5 @@ export type AnimateCSSGridOptions = {
   duration?: number;
   stagger?: number;
   easing?: keyof PopmotionEasing;
+  autoRegisterChildren?: boolean;
 };

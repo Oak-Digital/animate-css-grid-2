@@ -20,15 +20,22 @@ export class AnimateCSSGrid {
   private duration: number;
   private stagger: number;
   private observer: MutationObserver;
+  private autoRegisterChildren: boolean;
 
   constructor(
     element: HTMLElement,
-    { duration = 250, stagger = 0, easing = 'easeInOut' }: AnimateCSSGridOptions = {}
+    {
+      duration = 250,
+      stagger = 0,
+      easing = 'easeInOut',
+      autoRegisterChildren = true,
+    }: AnimateCSSGridOptions = {}
   ) {
     this.element = element;
     this.duration = duration;
     this.stagger = stagger;
     this.easing = easing;
+    this.autoRegisterChildren = autoRegisterChildren;
 
     this.setResizeListener();
     this.setResizeListener();
@@ -44,25 +51,9 @@ export class AnimateCSSGrid {
     // cache rect of grid, so children don't have to calculate it
     const rect = this.getGridBoundingClientRect();
     // create grid item instances
-    this.gridItems = Array.from(this.element.children).map((child) => {
-      const id = this.getNewId();
-      // assume the child is an HTML element or else 💀
-      const gridItem = new AnimateCSSGridItem(
-        this,
-        child as HTMLElement,
-        id,
-        rect
-      );
-
-      // setup event listeners
-      const eventNames = gridItemEventNames.forEach((name) => {
-        gridItem.on(name, (data) => {
-          this.eventEmitter.emit(name, data);
-        });
-      });
-
-      return gridItem;
-    });
+    if (autoRegisterChildren) {
+      this.createInitialGridItems(rect);
+    }
   }
 
   public get on() {
@@ -99,7 +90,28 @@ export class AnimateCSSGrid {
   }
 
   public recordPositions() {
+    if (this.autoRegisterChildren) {
+      this.registerNewGridItems();
+    }
     this.gridItems.forEach((gridItem) => gridItem.recordPosition());
+  }
+
+  public registerNewGridItems() {
+    // check if there are new grid items that need to be added
+    // TODO: probably a bit slow, so maybe refactor?
+    const newGridItems = Array.from(this.element.children).filter(
+      (child) => !this.gridItems.find((item) => item.element === child)
+    );
+    newGridItems.forEach((child) => {
+      const id = this.getNewId();
+      const gridItem = new AnimateCSSGridItem(
+        this,
+        child as HTMLElement,
+        id,
+        this.getGridBoundingClientRect()
+      );
+      this.registerGridItem(gridItem);
+    });
   }
 
   public findChildItem(child: HTMLElement | AnimateCSSGridItem) {
@@ -131,6 +143,21 @@ export class AnimateCSSGrid {
     return result;
   }
 
+  public registerGridItem(gridItem: AnimateCSSGridItem, index?: number) {
+    // TODO: maybe check if the element already exists?
+    const newIndex = index ?? this.gridItems.length;
+    this.gridItems.splice(newIndex, 0, gridItem);
+  }
+
+  public unregisterGridItem(gridItem: AnimateCSSGridItem) {
+    const index = this.gridItems.indexOf(gridItem);
+    if (index === -1) {
+      return;
+    }
+    const item = this.gridItems.splice(index, 1)[0];
+    item.destroy();
+  }
+
   public destroy() {
     // remove mutation observer
     this.observer.disconnect();
@@ -155,21 +182,51 @@ export class AnimateCSSGrid {
     this.mutationCallback('forceGridAnimation');
   }
 
+  private createInitialGridItems(gridRect: DOMRect) {
+    this.gridItems = Array.from(this.element.children).map((child) => {
+      const id = this.getNewId();
+      // assume the child is an HTML element or else 💀
+      const gridItem = new AnimateCSSGridItem(
+        this,
+        child as HTMLElement,
+        id,
+        gridRect
+      );
+
+      // setup event listeners
+      gridItemEventNames.forEach((name) => {
+        gridItem.on(name, (data) => {
+          this.eventEmitter.emit(name, data);
+        });
+      });
+
+      return gridItem;
+    });
+  }
+
   protected async mutationCallback(
     mutationsList: MutationRecord[] | 'forceGridAnimation'
   ) {
+    let addedOrRemoved = false;
     if (mutationsList !== 'forceGridAnimation') {
       // check if we care about the mutation
       const relevantMutationHappened = mutationsList.filter(
-        (m: MutationRecord) =>
-          m.attributeName === 'class' ||
-          m.addedNodes.length ||
-          m.removedNodes.length
+        (m: MutationRecord) => {
+          if (m.addedNodes.length > 0 || m.removedNodes.length > 0) {
+            addedOrRemoved = true;
+            return true;
+          }
+          return m.attributeName === 'class'
+        }
       ).length;
       if (!relevantMutationHappened) {
         return;
       }
       if (this.mutationsDisabled) return;
+    }
+
+    if (this.autoRegisterChildren && addedOrRemoved) {
+      this.registerNewGridItems();
     }
 
     // stop animation and reset transforms of items

@@ -251,9 +251,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   new AnimateCSSGrid(hiddenCardGrid!, {
-    stagger: 20,
+    stagger: 300,
     easing: 'backOut',
-    duration: 10000,
+    duration: 4000,
   });
 
   // scroll test

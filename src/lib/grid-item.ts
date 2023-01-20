@@ -19,6 +19,7 @@ import {
   getGridAwareBoundingClientRect,
 } from './grid';
 import { AnimateCSSGridEvents } from '../types/events';
+import { wait2 } from './wait';
 
 export const gridItemEventNames = [
   AnimateCSSGridEvents.ITEM_START,
@@ -221,7 +222,9 @@ export class AnimateCSSGridItem {
     duration = 250,
   }: StartAnimationArguments) {
     if (delay > 0) {
-      await wait(delay);
+      const { promise, abort } = wait2(delay);
+      this.stopAnimationFunction = abort;
+      await promise;
     }
 
     const completionPromise = new Promise<void>((resolve, reject) => {
