@@ -1,8 +1,12 @@
 node_modules
+index.html
 demo
 demo-dist
+vite.config.ts
+tsconfig.json
 src
 .gitignore
 .prettierrc
+.eslint*
 webpack.config.js
 *.log
