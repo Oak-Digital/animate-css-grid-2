@@ -92,10 +92,13 @@ export class AnimateCSSGridItem {
       return false;
     }
     this.isExtracted = true;
+    // translate because the element is absolutely positioned and the parent is not necessarily position relative
     const coords = this.getPositionCoords();
-    console.log(coords);
     applyCoordTransform(this.element, coords, { immediate: true });
     this.element.style.position = 'absolute';
+    this.element.style.boxSizing = 'border-box';
+    this.element.style.width = this.positionData.rect.width + 'px';
+    this.element.style.height = this.positionData.rect.height + 'px';
 
     return this;
   }
@@ -106,6 +109,11 @@ export class AnimateCSSGridItem {
     }
     this.isExtracted = false;
     this.element.style.position = '';
+    this.element.style.boxSizing = '';
+    this.element.style.top = '';
+    this.element.style.left = '';
+    this.element.style.width = '';
+    this.element.style.height = '';
     if (resetCoords) {
       this.resetTransforms();
     }
@@ -163,7 +171,7 @@ export class AnimateCSSGridItem {
 
     this.element.style.transformOrigin = '0 0';
     /* if (firstChild && childLeft === left && childTop === top) { */
-      /* firstChild.style.transformOrigin = '0 0'; */
+    /* firstChild.style.transformOrigin = '0 0'; */
     /* } */
 
     // this needs to happen imidiately so that the element is in the correct position before the animation starts
@@ -207,14 +215,11 @@ export class AnimateCSSGridItem {
     };
   }
 
-  public async startAnimation(
-    {
-      delay = 0,
-      easing = 'easeInOut',
-      duration = 250,
-    }: StartAnimationArguments
-  ) {
-
+  public async startAnimation({
+    delay = 0,
+    easing = 'easeInOut',
+    duration = 250,
+  }: StartAnimationArguments) {
     if (delay > 0) {
       await wait(delay);
     }
