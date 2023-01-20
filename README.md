@@ -37,7 +37,12 @@ If the grid is removed from the page, the animations will automatically be clean
 
 ES6 Module:
 
-`yarn add animate-css-grid` or `npm install animate-css-grid`
+```bash
+# yarn
+yarn add @oak-digital/animate-css-grid
+# npm
+npm install @oak-digital/animate-css-grid-2
+```
 
 ```js
 import { AnimateCSSGrid } from 'animate-css-grid'
