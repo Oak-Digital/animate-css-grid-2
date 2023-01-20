@@ -1,6 +1,7 @@
 import { AnimateCSSGrid, AnimateCSSGridItem } from '../src/index';
 import { tween } from 'popmotion';
 import { AnimateCSSGridEvents } from '../src/types';
+import { arraylikeToArray } from '../src/lib/arrays';
 
 document.addEventListener('DOMContentLoaded', () => {
   const grid: HTMLElement = document.querySelector('.grid')!;
@@ -129,13 +130,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const subjects = document.querySelector<HTMLElement>('.subjects')!;
 
   // animate the grid
-  const { unwrapGrid: unwrapGridSubjects } = wrapGrid(subjects, {
+  const agSubjects = new AnimateCSSGrid(subjects, {
     easing: 'linear',
   });
 
   // add a click handler
   subjects.addEventListener('click', (ev) => {
-    [...document.querySelectorAll('.subject')].forEach((el) =>
+    [...arraylikeToArray(document.querySelectorAll<HTMLElement>('.subject'))].forEach((el) =>
       el.classList.remove('subject--active')
     );
     let target = <HTMLElement>ev.target;
@@ -152,18 +153,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // children change
   // ========================================================
 
-  const changeGrid = document.querySelector('.grid-children-change');
-  const { unwrapChangeGrid, forceGridAnimation } = wrapGrid(changeGrid);
+  const changeGrid = document.querySelector<HTMLElement>('.grid-children-change')!;
+  const agChange = new AnimateCSSGrid(changeGrid);
+
 
   const updateContents = () => {
-    [...changeGrid.querySelectorAll('.card')].forEach((el) => {
+    [...arraylikeToArray(changeGrid.querySelectorAll<HTMLElement>('.card'))].forEach((el) => {
       const width = Math.random() * 300;
       const height = Math.random() * 200;
-      const inner = el.querySelector('.card__inner');
+      const inner = el.querySelector<HTMLElement>('.card__inner')!;
       inner.style.width = `${width}px`;
       inner.style.height = `${height}px`;
     });
-    forceGridAnimation();
+    agChange.forceGridAnimation();
   };
 
   setInterval(updateContents, 2000);
@@ -187,7 +189,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const nestedGrid = document.querySelector<HTMLElement>('.nested-grid')!;
   [...Array(400).keys()].forEach(addCard(nestedGrid));
 
-  wrapGrid(nestedGrid, { duration: 300 });
+  const agNested = new AnimateCSSGrid(nestedGrid, {
+    duration: 300,
+  });
 
   nestedGrid.addEventListener('click', (ev) => {
     let target = <HTMLElement>ev.target;
@@ -205,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ========================================================
 
   const hiddenCardGrid =
-    document.querySelector<HTMLElement>('.hidden-cards-grid');
+    document.querySelector<HTMLElement>('.hidden-cards-grid')!;
 
   document
     .querySelector('.js-toggle-grid')
@@ -214,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
     );
 
   document.querySelector('.js-hide-button')?.addEventListener('click', () => {
-    [...(hiddenCardGrid?.querySelectorAll('.card') ?? [])].forEach((el) =>
+    [...arraylikeToArray(hiddenCardGrid.querySelectorAll<HTMLElement>('.card'))].forEach((el) =>
       el.classList.remove('card--hidden')
     );
   });
@@ -246,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  wrapGrid(hiddenCardGrid!, {
+  new AnimateCSSGrid(hiddenCardGrid!, {
     stagger: 20,
     easing: 'backOut',
     duration: 10000,
@@ -254,16 +258,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // scroll test
 
-  const scrollTest = document.querySelector<HTMLElement>('.scroll-example');
+  const scrollTest = document.querySelector<HTMLElement>('.scroll-example')!;
   scrollTest?.addEventListener('click', () => {
     const children = scrollTest.children;
-    const reversed = [...children].reverse();
+    const reversed = [...arraylikeToArray(children)].reverse();
     scrollTest.innerHTML = '';
     reversed.forEach((c) => {
       scrollTest.appendChild(c);
     });
   });
-  wrapGrid(scrollTest!, {
+  new AnimateCSSGrid(scrollTest, {
     duration: 2000,
   });
 });
