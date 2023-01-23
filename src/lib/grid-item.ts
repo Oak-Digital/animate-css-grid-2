@@ -205,6 +205,8 @@ export class AnimateCSSGridItem {
     /* } */
 
     // this needs to happen imidiately so that the element is in the correct position before the animation starts
+    // TODO: figure out why this is needed
+    applyCoordTransform(this.element, coords, { immediate: true });
     applyCoordTransform(this.element, coords);
 
     this.currentFromCoords = coords;
