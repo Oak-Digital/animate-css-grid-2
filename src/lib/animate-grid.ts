@@ -6,10 +6,8 @@ import EventEmitter from 'eventemitter3';
 import { AnimateCSSGridEvents } from '../types/events';
 
 export class AnimateCSSGrid {
-  // public properties
-  public readonly element: HTMLElement;
-
   // protected and private properties
+  private _element?: HTMLElement;
   private idCounter = 0;
   private _easing: keyof PopmotionEasing = 'easeInOut';
   private mutationsDisabled = false;
@@ -23,7 +21,7 @@ export class AnimateCSSGrid {
   private autoRegisterChildren: boolean;
 
   constructor(
-    element: HTMLElement,
+    element?: HTMLElement,
     {
       duration = 250,
       stagger = 0,
@@ -31,7 +29,6 @@ export class AnimateCSSGrid {
       autoRegisterChildren = true,
     }: AnimateCSSGridOptions = {}
   ) {
-    this.element = element;
     this.duration = duration;
     this.stagger = stagger;
     this.easing = easing;
@@ -41,18 +38,9 @@ export class AnimateCSSGrid {
     this.setResizeListener();
 
     this.observer = new MutationObserver(this.mutationCallback.bind(this));
-    this.observer.observe(this.element, {
-      childList: true,
-      attributes: true,
-      subtree: true,
-      attributeFilter: ['class'],
-    });
 
-    // cache rect of grid, so children don't have to calculate it
-    const rect = this.getGridBoundingClientRect();
-    // create grid item instances
-    if (autoRegisterChildren) {
-      this.createInitialGridItems(rect);
+    if (element) {
+      this.registerElement(element);
     }
   }
 
@@ -77,9 +65,38 @@ export class AnimateCSSGrid {
     this._easing = easing;
   }
 
+  public get element() {
+    return this._element;
+  }
+
+  public registerElement(element: HTMLElement) {
+    if (this.element) {
+      throw new Error('Element already registered');
+    }
+    this._element = element;
+
+    // cache rect of grid, so children don't have to calculate it
+    const rect = this.getGridBoundingClientRect(); // should never be undefined
+    if (!rect) {
+      throw new Error('Grid rect not found');
+    }
+
+    // create grid item instances
+    if (this.autoRegisterChildren) {
+      this.createInitialGridItems(rect);
+    }
+
+    this.observer.observe(this._element, {
+      childList: true,
+      attributes: true,
+      subtree: true,
+      attributeFilter: ['class'],
+    });
+  }
+
   // public methods
   public getGridBoundingClientRect() {
-    return this.element.getBoundingClientRect();
+    return this.element?.getBoundingClientRect();
   }
 
   public async disableMutationsWhileFunctionRuns(func: () => void) {
@@ -99,7 +116,7 @@ export class AnimateCSSGrid {
   public registerNewGridItems() {
     // check if there are new grid items that need to be added
     // TODO: probably a bit slow, so maybe refactor?
-    const newGridItems = Array.from(this.element.children).filter(
+    const newGridItems = Array.from(this.element?.children ?? []).filter(
       (child) => !this.gridItems.find((item) => item.element === child)
     );
     newGridItems.forEach((child) => {
@@ -116,7 +133,7 @@ export class AnimateCSSGrid {
 
   public unregisterRemovedGridItems() {
     const removedGridItems = this.gridItems.filter(
-      (gridItem) => !this.element.contains(gridItem.element)
+      (gridItem) => gridItem.element && !this.element?.contains(gridItem.element)
     );
     removedGridItems.forEach((gridItem) => this.unregisterGridItem(gridItem));
   }
@@ -190,7 +207,7 @@ export class AnimateCSSGrid {
   }
 
   private createInitialGridItems(gridRect: DOMRect) {
-    this.gridItems = Array.from(this.element.children).map((child) => {
+    this.gridItems = Array.from(this.element?.children ?? []).map((child) => {
       const id = this.getNewId();
       // assume the child is an HTML element or else 💀
       const gridItem = new AnimateCSSGridItem(
@@ -278,6 +295,9 @@ export class AnimateCSSGrid {
 
     this.resizeFunction = throttle(() => {
       const bodyElement = document.querySelector('body');
+      if (!this.element) {
+        return;
+      }
       const containerIsNoLongerInPage =
         bodyElement && !bodyElement.contains(this.element);
       if (!this.element || containerIsNoLongerInPage) {

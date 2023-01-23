@@ -29,11 +29,11 @@ export const gridItemEventNames = [
 ] as const;
 
 export class AnimateCSSGridItem {
-  public readonly id: number | string;
-  public readonly element: HTMLElement;
-  public readonly animateGrid: AnimateCSSGrid;
-  public positionData: ItemPosition;
+  public readonly id?: number | string;
+  public readonly animateGrid?: AnimateCSSGrid;
+  public positionData?: ItemPosition;
 
+  private _element?: HTMLElement;
   private _isExtracted = false;
   private childRect: BoundingClientRect | null = null;
   private currentFromCoords: Coords | null = null;
@@ -46,22 +46,21 @@ export class AnimateCSSGridItem {
   >();
 
   constructor(
-    animateGrid: AnimateCSSGrid,
-    element: HTMLElement,
-    id: number | string,
+    animateGrid?: AnimateCSSGrid,
+    element?: HTMLElement,
+    id?: number | string,
     gridRect?: DOMRect
   ) {
     this.id = id;
-    this.element = element;
     this.animateGrid = animateGrid;
 
-    // set the id on the element
-    // TODO: figure out if we need this
-    element.dataset[DATASET_ID_KEY] = id.toString();
+    if (element) {
+      this.registerElement(element, gridRect);
+    }
+  }
 
-    // record position
-    // we need to assign it directly in the constructor for typescript to be happy
-    this.positionData = this.getPositionData(gridRect);
+  public get element() {
+    return this._element;
   }
 
   public get isExtracted() {
@@ -85,6 +84,16 @@ export class AnimateCSSGridItem {
     return this.eventEmitter.off.bind(this.eventEmitter);
   }
 
+  public registerElement(element: HTMLElement, gridRect?: DOMRect) {
+    if (this.element) {
+      throw new Error(
+        'An element is already registered to this grid item. You can only register one element per grid item.'
+      );
+    }
+    this._element = element;
+    this.recordPosition(gridRect)
+  }
+
   // extracting means that the user can gain control over the element
   // by setting the elements positioning to absolute and allowing the grid to
   // reorder the other elements
@@ -92,9 +101,15 @@ export class AnimateCSSGridItem {
     if (this.isExtracted) {
       return false;
     }
+    if (!this.element || !this.positionData) {
+      return false;
+    }
     this.isExtracted = true;
     // translate because the element is absolutely positioned and the parent is not necessarily position relative
     const coords = this.getPositionCoords();
+    if (!coords) {
+      return false;
+    }
     applyCoordTransform(this.element, coords, { immediate: true });
     this.element.style.position = 'absolute';
     this.element.style.boxSizing = 'border-box';
@@ -106,6 +121,9 @@ export class AnimateCSSGridItem {
 
   public unExtract(resetCoords: boolean = true) {
     if (!this.isExtracted) {
+      return false;
+    }
+    if (!this.element) {
       return false;
     }
     this.isExtracted = false;
@@ -127,11 +145,14 @@ export class AnimateCSSGridItem {
     if (this.isExtracted) {
       return false;
     }
+    if (!this.element || !this.positionData) {
+      return false;
+    }
     /* measure child element */
     const gridBoundingClientRect =
-      gridRect ?? this.animateGrid.getGridBoundingClientRect();
+      gridRect ?? this.animateGrid?.getGridBoundingClientRect();
 
-    const child = this.element.children[0] as HTMLElement;
+    /* const child = this.element.children[0] as HTMLElement; */
 
     /* if (!child) { */
     /*   return false; */
@@ -146,6 +167,10 @@ export class AnimateCSSGridItem {
     const itemGridRect = this.getItemGridRect(gridBoundingClientRect);
 
     const itemRect = this.positionData.rect;
+
+    if (!itemGridRect) {
+      return false;
+    }
 
     if (
       itemGridRect.top === itemRect.top &&
@@ -168,7 +193,11 @@ export class AnimateCSSGridItem {
     const firstChild = this.element.children[0] as HTMLElement;
     /* firstChild.style.transform = ''; */
 
-    const coords: Coords = this.calculateFromCoords();
+    const coords = this.calculateFromCoords();
+
+    if (!coords) {
+      return false;
+    }
 
     this.element.style.transformOrigin = '0 0';
     /* if (firstChild && childLeft === left && childTop === top) { */
@@ -176,7 +205,7 @@ export class AnimateCSSGridItem {
     /* } */
 
     // this needs to happen imidiately so that the element is in the correct position before the animation starts
-    applyCoordTransform(this.element, coords, { immediate: true });
+    applyCoordTransform(this.element, coords);
 
     this.currentFromCoords = coords;
 
@@ -185,7 +214,11 @@ export class AnimateCSSGridItem {
 
   public getItemGridRect(gridRect?: DOMRect) {
     const gridBoundingClientRect =
-      gridRect ?? this.animateGrid.getGridBoundingClientRect();
+      gridRect ?? this.animateGrid?.getGridBoundingClientRect();
+
+    if (!this.element || !gridBoundingClientRect) {
+      return null;
+    }
 
     const itemGridRect = getGridAwareBoundingClientRect(
       gridBoundingClientRect,
@@ -195,8 +228,11 @@ export class AnimateCSSGridItem {
     return itemGridRect;
   }
 
-  public calculateFromCoords(): Coords {
+  public calculateFromCoords(): Coords | null {
     const itemGridRect = this.getItemGridRect();
+    if (!itemGridRect || !this.positionData) {
+      return null;
+    }
     const itemRect = this.positionData.rect;
     return {
       scaleX: itemRect.width / itemGridRect.width,
@@ -206,7 +242,10 @@ export class AnimateCSSGridItem {
     };
   }
 
-  public getPositionCoords(): Coords {
+  public getPositionCoords(): Coords | null {
+    if (!this.positionData) {
+      return null;
+    }
     const itemRect = this.positionData.rect;
     return {
       scaleX: 1,
@@ -221,6 +260,12 @@ export class AnimateCSSGridItem {
     easing = 'easeInOut',
     duration = 250,
   }: StartAnimationArguments) {
+    if (!this.element || !this.positionData) {
+      return false;
+    }
+
+    /* applyCoordTransform(this.element, this.currentFromCoords ?? baseCoords); */
+
     if (delay > 0) {
       const { promise, abort } = wait2(delay);
       this.stopAnimationFunction = abort;
@@ -228,9 +273,6 @@ export class AnimateCSSGridItem {
     }
 
     const completionPromise = new Promise<void>((resolve, reject) => {
-      if (this.element.classList.contains('card--1')) {
-        /* debugger */
-      }
       const { stop } = tween({
         from: this.currentFromCoords ?? baseCoords,
         to: baseCoords,
@@ -238,7 +280,7 @@ export class AnimateCSSGridItem {
         ease: popmotionEasing[easing],
       }).start({
         update: (transforms: Coords) => {
-          applyCoordTransform(this.element, transforms);
+          applyCoordTransform(this.element!, transforms);
           // this helps prevent layout thrashing
           sync.postRender(() => this.recordPosition());
         },
@@ -269,6 +311,9 @@ export class AnimateCSSGridItem {
     if (!force && this.isExtracted) {
       return;
     }
+    if (!this.element) {
+      return;
+    }
     this.element.style.transform = '';
     const firstChild = this.element.children[0] as HTMLElement;
     if (firstChild) {
@@ -278,7 +323,10 @@ export class AnimateCSSGridItem {
 
   protected getPositionData(gridRect?: DOMRect) {
     const gridBoundingClientRect =
-      gridRect ?? this.animateGrid.getGridBoundingClientRect();
+      gridRect ?? this.animateGrid?.getGridBoundingClientRect();
+    if (!gridBoundingClientRect || !this.element) {
+      return null;
+    }
     const rect = getGridAwareBoundingClientRect(
       gridBoundingClientRect,
       this.element
@@ -290,7 +338,11 @@ export class AnimateCSSGridItem {
   }
 
   public recordPosition(gridRect?: DOMRect) {
-    this.positionData = this.getPositionData(gridRect);
+    const newPosition = this.getPositionData(gridRect);
+    if (!newPosition) {
+      return;
+    }
+    this.positionData = newPosition;
   }
 
   public destroy() {
@@ -298,7 +350,9 @@ export class AnimateCSSGridItem {
     // stop animation
     this.stopAnimationFunction();
     // reset transforms
-    this.element.style.transform = '';
+    if (this.element) {
+      this.element.style.transform = '';
+    }
 
     this.eventEmitter.emit(AnimateCSSGridEvents.ITEM_AFTER_DESTROY, this);
 
