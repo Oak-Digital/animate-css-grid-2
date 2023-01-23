@@ -86,6 +86,8 @@ export class AnimateCSSGrid {
       this.createInitialGridItems(rect);
     }
 
+    this.recordPositions();
+
     this.observer.observe(this._element, {
       childList: true,
       attributes: true,
