@@ -230,7 +230,7 @@ export class AnimateCSSGridItem implements IAnimateGridItem {
           left - toLeft + itemToTransform.e,
           top - toTop + itemToTransform.f
         ),
-        scale(itemFromRect.width / itemToRect.width),
+        scale(itemFromRect.width / itemToRect.width, itemFromRect.height / itemToRect.height),
       ]);
       this.currentFromTransform = newMatrix;
 
@@ -255,12 +255,21 @@ export class AnimateCSSGridItem implements IAnimateGridItem {
 
     // apply the styles
     this.applyTransforms(this.currentFromTransform);
-    this.currentFromRect && this.absoluteAnimation && this.applyWidthHeight(this.currentFromRect?.width, this.currentFromRect?.height)
+    if (this.currentFromRect && this.absoluteAnimation) {
+      this.applyWidthHeight(this.currentFromRect?.width, this.currentFromRect?.height);
+      this.element.style.position = 'absolute';
+    }
     this.emit('progress');
 
     sync.postRender(() => {
+      if (!this.element) {
+        return;
+      }
       this.applyTransforms(this.currentFromTransform);
-      this.currentFromRect && this.absoluteAnimation && this.applyWidthHeight(this.currentFromRect?.width, this.currentFromRect?.height)
+      if (this.currentFromRect && this.absoluteAnimation) {
+        this.applyWidthHeight(this.currentFromRect?.width, this.currentFromRect?.height);
+        this.element.style.position = 'absolute';
+      }
       this.emit('progress');
     })
   }
@@ -374,7 +383,7 @@ export class AnimateCSSGridItem implements IAnimateGridItem {
 
     this.resetTransforms();
     if (this.absoluteAnimation) {
-      this.element.style.position = oldPosition;
+      this.element.style.position = '';
       this.element.style.boxSizing = oldBoxSizing;
     }
 

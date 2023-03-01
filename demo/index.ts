@@ -131,6 +131,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // animate the grid
   const agSubjects = new AnimateCSSGrid(subjects, {
     easing: 'linear',
+    duration: 300,
+    /* absoluteAnimation: true, */
   });
 
   // add a click handler
