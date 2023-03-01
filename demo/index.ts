@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const ag2 = new AnimateCSSGrid(grid, {
     easing: 'backOut',
     /* duration: 6000, */
+    absoluteAnimation: true,
   });
 
   /* ag2.recordPositions(); */

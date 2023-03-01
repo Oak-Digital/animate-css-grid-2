@@ -287,16 +287,17 @@ export class AnimateCSSGrid implements IAnimateGrid {
     const affectedItems = this.gridItems.filter((gridItem) =>
       gridItem.prepareAnimation()
     );
-    /* debugger; */
+    const itemsToAnimate = this.absoluteAnimation ? this.gridItems : affectedItems;
+    itemsToAnimate.forEach(item => item.afterPrepareAnimation());
 
     await this.disableWhile(() => {
       // call on start
-      this.emit('start', affectedItems);
+      this.emit('start', itemsToAnimate);
     });
 
     // start animation for children
     await Promise.allSettled(
-      affectedItems.map((gridItem) => {
+      itemsToAnimate.map((gridItem) => {
         return gridItem.startAnimation();
       })
     );
@@ -305,7 +306,7 @@ export class AnimateCSSGrid implements IAnimateGrid {
 
     await this.disableWhile(() => {
       // call on end
-      this.emit('end', affectedItems);
+      this.emit('end', itemsToAnimate);
     });
   }
 

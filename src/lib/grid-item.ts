@@ -4,19 +4,12 @@ import {
   AnimateCSSGridItemEvent,
   AnimateCSSGridItemEventCallback,
   AnimateCSSGridItemOptions,
-  AnimateCSSGridOptions,
   BoundingClientRect,
-  ItemPosition,
   PopmotionEasing,
-  Transform,
 } from '../types';
-import { arraylikeToArray } from './arrays';
-import { popmotionEasing } from './easings';
-import { applyCoordTransform } from './grid';
 import { wait2 } from './wait';
 import { IAnimateGridItem } from '../types/grid-item';
 import { IAnimateGrid } from '../types/animate-grid';
-import { mat4 } from 'gl-matrix';
 import {
   compose,
   fromDefinition,
@@ -168,6 +161,7 @@ export class AnimateCSSGridItem implements IAnimateGridItem {
     }
 
     if (
+      !this.absoluteAnimation &&
       itemGridRect.top === itemFromRect.top &&
       itemGridRect.left === itemFromRect.left &&
       itemGridRect.width === itemFromRect.width &&
@@ -250,6 +244,25 @@ export class AnimateCSSGridItem implements IAnimateGridItem {
 
     return true;
     // after all grid items have been prepared, the styles can be applied
+  }
+
+  public afterPrepareAnimation() {
+    if (!this.element) {
+      return;
+    }
+
+    // TODO: this might be overkill, so it should be refactored
+
+    // apply the styles
+    this.applyTransforms(this.currentFromTransform);
+    this.currentFromRect && this.absoluteAnimation && this.applyWidthHeight(this.currentFromRect?.width, this.currentFromRect?.height)
+    this.emit('progress');
+
+    sync.postRender(() => {
+      this.applyTransforms(this.currentFromTransform);
+      this.currentFromRect && this.absoluteAnimation && this.applyWidthHeight(this.currentFromRect?.width, this.currentFromRect?.height)
+      this.emit('progress');
+    })
   }
 
   // gets the rect relative to the parent grid
@@ -448,5 +461,22 @@ export class AnimateCSSGridItem implements IAnimateGridItem {
 
     // remove event listeners
     this.eventEmitter.removeAllListeners();
+  }
+
+  private applyTransforms(matrix: Matrix) {
+    if (!this.element) {
+      return;
+    }
+
+    this.element.style.transform = toCSS(matrix);
+  }
+
+  private applyWidthHeight(width: number, height: number) {
+    if (!this.element) {
+      return;
+    }
+
+    this.element.style.width = `${width}px`;
+    this.element.style.height = `${height}px`;
   }
 }

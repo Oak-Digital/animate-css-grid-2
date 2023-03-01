@@ -3,6 +3,8 @@ import { AnimateCSSGridItemEvent, AnimateCSSGridItemEventCallback } from "./even
 export interface IAnimateGridItem {
     // prepares the animation by recording the new position of the grid item and setting the from position to the previously recorded position
     prepareAnimation(): void;
+    // called when all items have been prepared
+    afterPrepareAnimation(): void;
     // starts animation from previously recorded position to current position
     startAnimation(): void;
     stopAnimation(): void;
