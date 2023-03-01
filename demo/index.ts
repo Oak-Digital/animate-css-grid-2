@@ -1,6 +1,5 @@
-import { AnimateCSSGrid, AnimateCSSGridItem } from '../src/index';
-import { tween } from 'popmotion';
-import { AnimateCSSGridEvents } from '../src/types';
+import { animate } from 'popmotion';
+import { AnimateCSSGrid } from '../src/index';
 import { arraylikeToArray } from '../src/lib/arrays';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -44,14 +43,14 @@ document.addEventListener('DOMContentLoaded', () => {
     easing: 'backOut',
   });
 
-  ag.on(AnimateCSSGridEvents.START, (els: AnimateCSSGridItem[]) => {
+  ag.on('start', (els) => {
     els.forEach((el) => {
       /* console.log('foo'); */
-      el.element.classList.add('big');
+      el.element?.classList.add('big');
     });
   });
-  ag.on(AnimateCSSGridEvents.END, (els: AnimateCSSGridItem[]) => {
-    els.forEach((el) => el.element.classList.add('small'));
+  ag.on('end', (els) => {
+    els.forEach((el) => el.element?.classList.add('small'));
   });
 
   ag.destroy();
@@ -59,16 +58,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const ag2 = new AnimateCSSGrid(grid, {
     easing: 'backOut',
+    /* duration: 6000, */
   });
 
-  ag2.on(AnimateCSSGridEvents.START, (els: AnimateCSSGridItem[]) => {
-      els.forEach((el) => {
-        /* console.log('onstart'); */
-        el.element.classList.add('big');
-      });
+  /* ag2.recordPositions(); */
+  ag2.on('start', (els) => {
+    els.forEach((el) => {
+      /* console.log('onstart'); */
+      el.element?.classList.add('big');
+    });
   });
-  ag2.on(AnimateCSSGridEvents.END, (els: AnimateCSSGridItem[]) => {
-    els.forEach((el) => el.element.classList.add('small'));
+  ag2.on('end', (els) => {
+    els.forEach((el) => el.element?.classList.add('small'));
   });
 
   document
@@ -88,34 +89,31 @@ document.addEventListener('DOMContentLoaded', () => {
     '.grid-fade .card--2'
   )!;
   let expanded = true;
-  gridFade.addEventListener('click', (ev) => {
+  gridFade.addEventListener('click', () => {
     if (expanded) {
       gridFadeCard.style.display = 'block';
-      agFade.extractChild(gridFadeCard);
-      tween({
+      /* agFade.extractChild(gridFadeCard); */
+      animate({
         from: 1,
         to: 0,
         duration: 500,
-      }).start({
-        update: (v: any) => {
+        onUpdate: (v: any) => {
           gridFadeCard.style.opacity = `${v}`;
         },
-        complete: () => {
+        onComplete: () => {
           gridFadeCard.style.display = 'none';
         },
       });
     } else {
       gridFadeCard.style.display = 'block';
-      agFade.unExtractChild(gridFadeCard);
-      tween({
+      animate({
         from: 0,
         to: 1,
         duration: 500,
-      }).start({
-        update: (v: any) => {
+        onUpdate: (v: any) => {
           gridFadeCard.style.opacity = `${v}`;
         },
-        complete: () => {
+        onComplete: () => {
           gridFadeCard.style.display = 'block';
         },
       });
@@ -136,9 +134,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // add a click handler
   subjects.addEventListener('click', (ev) => {
-    [...arraylikeToArray(document.querySelectorAll<HTMLElement>('.subject'))].forEach((el) =>
-      el.classList.remove('subject--active')
-    );
+    [
+      ...arraylikeToArray(document.querySelectorAll<HTMLElement>('.subject')),
+    ].forEach((el) => el.classList.remove('subject--active'));
     let target = <HTMLElement>ev.target;
     while (target !== document.body) {
       if (target.classList.contains('subject')) {
@@ -153,12 +151,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // children change
   // ========================================================
 
-  const changeGrid = document.querySelector<HTMLElement>('.grid-children-change')!;
+  const changeGrid = document.querySelector<HTMLElement>(
+    '.grid-children-change'
+  )!;
   const agChange = new AnimateCSSGrid(changeGrid);
 
-
   const updateContents = () => {
-    [...arraylikeToArray(changeGrid.querySelectorAll<HTMLElement>('.card'))].forEach((el) => {
+    [
+      ...arraylikeToArray(changeGrid.querySelectorAll<HTMLElement>('.card')),
+    ].forEach((el) => {
       const width = Math.random() * 300;
       const height = Math.random() * 200;
       const inner = el.querySelector<HTMLElement>('.card__inner')!;
@@ -174,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // nested grid
   // ========================================================
 
-  const addCard = (container) => (i) => {
+  const addCard = (container: HTMLElement) => () => {
     const randomNumber = Math.floor(Math.random() * 5) + 1;
     container.insertAdjacentHTML(
       'beforeend',
@@ -218,16 +219,20 @@ document.addEventListener('DOMContentLoaded', () => {
     );
 
   document.querySelector('.js-hide-button')?.addEventListener('click', () => {
-    [...arraylikeToArray(hiddenCardGrid.querySelectorAll<HTMLElement>('.card'))].forEach((el) =>
-      el.classList.remove('card--hidden')
-    );
+    [
+      ...arraylikeToArray(
+        hiddenCardGrid.querySelectorAll<HTMLElement>('.card')
+      ),
+    ].forEach((el) => el.classList.remove('card--hidden'));
   });
 
-  document.querySelector('.hidden-test.js-add-card')?.addEventListener('click', () => {
-    const randomNumber = Math.floor(Math.random() * 5) + 1;
-    hiddenCardGrid?.insertAdjacentHTML(
-      'beforeend',
-      `
+  document
+    .querySelector('.hidden-test.js-add-card')
+    ?.addEventListener('click', () => {
+      const randomNumber = Math.floor(Math.random() * 5) + 1;
+      hiddenCardGrid?.insertAdjacentHTML(
+        'beforeend',
+        `
       <div class="card card--${randomNumber}">
       <div>
         <div class="card__avatar"></div>
@@ -236,8 +241,8 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     </div>
     `
-    );
-  });
+      );
+    });
 
   hiddenCardGrid?.addEventListener('click', (ev) => {
     let target = <HTMLElement>ev.target;

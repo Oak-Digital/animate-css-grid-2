@@ -2,32 +2,29 @@ import sync from 'framesync';
 import { Coords } from '../types';
 import { BoundingClientRect } from '../types/rect';
 
-export const baseCoords: Coords = {
-  translateX: 0,
-  translateY: 0,
-  scaleX: 1,
-  scaleY: 1,
-};
+/* export const baseCoords: Coords = { */
+/*   translateX: 0, */
+/*   translateY: 0, */
+/*   scaleX: 1, */
+/*   scaleY: 1, */
+/* }; */
 
 // in order to account for scroll, (which we're not listening for)
 // always cache the item's position relative
 // to the top and left of the grid container
-export const getGridAwareBoundingClientRect = (
-  gridBoundingClientRect: BoundingClientRect,
-  el: HTMLElement
-): BoundingClientRect => {
-  const { top, left, width, height } = el.getBoundingClientRect();
-  const rect = { top, left, width, height };
-  rect.top -= gridBoundingClientRect.top;
-  rect.left -= gridBoundingClientRect.left;
-  // if an element is display:none it will return top: 0 and left:0
-  // rather than saying it's still in the containing element
-  // so we need to use Math.max to make sure the coordinates stay
-  // within the container
-  rect.top = Math.max(rect.top, 0);
-  rect.left = Math.max(rect.left, 0);
-  return rect;
-};
+/* export const getGridAwareBoundingClientRect = ( */
+/*   gridBoundingClientRect: BoundingClientRect, */
+/*   el: HTMLElement */
+/* ): BoundingClientRect => { */
+/*   const { top, left, width, height } = el.getBoundingClientRect(); */
+/*   const rect = { top, left, width, height }; */
+/*   rect.top -= gridBoundingClientRect.top; */
+/*   rect.left -= gridBoundingClientRect.left; */
+/*   // if an element is display:none it will return top: 0 and left:0 */
+/*   // TODO: handle `display: none` elements */
+/**/
+/*   return rect; */
+/* }; */
 
 // the function used during the tweening
 export const applyCoordTransform = (

@@ -1,24 +1,32 @@
-import { AnimateCSSGridOptions, PopmotionEasing } from '../types';
+import {
+  AnimateCSSGridEvent,
+  AnimateCSSGridEventCallback,
+  animateCSSGridEventsToItemsMap,
+  animateCSSGridItemEvents,
+  AnimateCSSGridOptions,
+  PopmotionEasing,
+} from '../types';
 import wait from 'wait';
 import { throttle } from 'lodash';
-import { AnimateCSSGridItem, gridItemEventNames } from './grid-item';
+import { AnimateCSSGridItem } from './grid-item';
 import EventEmitter from 'eventemitter3';
-import { AnimateCSSGridEvents } from '../types/events';
+import { IAnimateGridItem } from '../types/grid-item';
+import { IAnimateGrid } from '../types/animate-grid';
 
-export class AnimateCSSGrid {
+export class AnimateCSSGrid implements IAnimateGrid {
   // protected and private properties
   private _element?: HTMLElement;
-  private idCounter = 0;
   private _easing: keyof PopmotionEasing = 'easeInOut';
   private mutationsDisabled = false;
-  private gridItems: AnimateCSSGridItem[] = [];
+  private gridItems: IAnimateGridItem[] = [];
   private resizeFunction = () => {};
   private scrollFunction = () => {};
-  private eventEmitter = new EventEmitter<AnimateCSSGridEvents>();
+  private eventEmitter = new EventEmitter<AnimateCSSGridEvent>();
   private duration: number;
   private stagger: number;
   private observer: MutationObserver;
   private autoRegisterChildren: boolean;
+  private absoluteAnimation: boolean;
 
   constructor(
     element?: HTMLElement,
@@ -27,12 +35,14 @@ export class AnimateCSSGrid {
       stagger = 0,
       easing = 'easeInOut',
       autoRegisterChildren = true,
+      absoluteAnimation = false,
     }: AnimateCSSGridOptions = {}
   ) {
     this.duration = duration;
     this.stagger = stagger;
     this.easing = easing;
     this.autoRegisterChildren = autoRegisterChildren;
+    this.absoluteAnimation = absoluteAnimation;
 
     this.setResizeListener();
     this.setResizeListener();
@@ -44,16 +54,37 @@ export class AnimateCSSGrid {
     }
   }
 
-  public get on() {
-    return this.eventEmitter.on.bind(this.eventEmitter);
+  // these functions should be bound to have the correct this reference
+  public on<EventName extends AnimateCSSGridEvent>(
+    eventName: EventName,
+    callback: AnimateCSSGridEventCallback[EventName]
+  ) {
+    this.eventEmitter.on(eventName, callback);
+    return this;
   }
 
-  public get once() {
-    return this.eventEmitter.once.bind(this.eventEmitter);
+  public once<EventName extends AnimateCSSGridEvent>(
+    eventName: EventName,
+    callback: AnimateCSSGridEventCallback[EventName]
+  ) {
+    this.eventEmitter.once(eventName, callback);
+    return this;
   }
 
-  public get off() {
-    return this.eventEmitter.off.bind(this.eventEmitter);
+  public off<EventName extends AnimateCSSGridEvent>(
+    eventName: EventName,
+    callback: AnimateCSSGridEventCallback[EventName]
+  ) {
+    this.eventEmitter.off(eventName, callback);
+    return this;
+  }
+
+  // Use this for type safety
+  private emit<EventName extends AnimateCSSGridEvent>(
+    eventName: EventName,
+    ...args: Parameters<AnimateCSSGridEventCallback[EventName]>
+  ) {
+    this.eventEmitter.emit(eventName, ...args);
   }
 
   // getters and setters
@@ -70,20 +101,21 @@ export class AnimateCSSGrid {
   }
 
   public registerElement(element: HTMLElement) {
+    // REFACTOR: This function should be refactored to keep better track of registered elements
     if (this.element) {
       throw new Error('Element already registered');
     }
     this._element = element;
 
-    // cache rect of grid, so children don't have to calculate it
-    const rect = this.getGridBoundingClientRect(); // should never be undefined
+    // TODO: cache rect of grid, so children don't have to read it
+    const rect = this.getGridRect(); // should never be undefined
     if (!rect) {
       throw new Error('Grid rect not found');
     }
 
     // create grid item instances
     if (this.autoRegisterChildren) {
-      this.createInitialGridItems(rect);
+      this.createInitialGridItems();
     }
 
     this.recordPositions();
@@ -94,14 +126,25 @@ export class AnimateCSSGrid {
       subtree: true,
       attributeFilter: ['class'],
     });
+
+    return this;
+  }
+
+  public unregisterElement(element: HTMLElement | IAnimateGridItem) {
+    if (element instanceof HTMLElement) {
+      // TODO: unregister element
+    } else {
+      this.unregisterGridItem(element);
+    }
   }
 
   // public methods
-  public getGridBoundingClientRect() {
+
+  public getGridRect() {
     return this.element?.getBoundingClientRect();
   }
 
-  public async disableMutationsWhileFunctionRuns(func: () => void) {
+  public async disableWhile(func: () => void) {
     this.mutationsDisabled = true;
     func();
     await wait(0);
@@ -110,32 +153,32 @@ export class AnimateCSSGrid {
 
   public recordPositions() {
     if (this.autoRegisterChildren) {
-      this.registerNewGridItems();
+      this.registerExistingElements();
     }
     this.gridItems.forEach((gridItem) => gridItem.recordPosition());
   }
 
-  public registerNewGridItems() {
+  public registerExistingElements() {
     // check if there are new grid items that need to be added
     // TODO: probably a bit slow, so maybe refactor?
     const newGridItems = Array.from(this.element?.children ?? []).filter(
       (child) => !this.gridItems.find((item) => item.element === child)
     );
     newGridItems.forEach((child) => {
-      const id = this.getNewId();
-      const gridItem = new AnimateCSSGridItem(
-        this,
-        child as HTMLElement,
-        id,
-        this.getGridBoundingClientRect()
-      );
+      const gridItem = new AnimateCSSGridItem(this, child as HTMLElement, {
+        absoluteAnimation: this.absoluteAnimation,
+        duration: this.duration,
+        stagger: this.stagger,
+        easing: this.easing,
+      });
       this.registerGridItem(gridItem);
     });
   }
 
-  public unregisterRemovedGridItems() {
+  public unregisterRemovedElements() {
     const removedGridItems = this.gridItems.filter(
-      (gridItem) => gridItem.element && !this.element?.contains(gridItem.element)
+      (gridItem) =>
+        gridItem.element && !this.element?.contains(gridItem.element)
     );
     removedGridItems.forEach((gridItem) => this.unregisterGridItem(gridItem));
   }
@@ -151,31 +194,13 @@ export class AnimateCSSGrid {
     return childItem;
   }
 
-  public extractChild(child: HTMLElement | AnimateCSSGridItem) {
-    const childItem = this.findChildItem(child);
-    const result = childItem.extract();
-    if (result) {
-      this.forceGridAnimation();
-    }
-    return result;
-  }
-
-  public unExtractChild(child: HTMLElement | AnimateCSSGridItem) {
-    const childItem = this.findChildItem(child);
-    const result = childItem.unExtract();
-    if (result) {
-      this.forceGridAnimation();
-    }
-    return result;
-  }
-
-  public registerGridItem(gridItem: AnimateCSSGridItem, index?: number) {
+  public registerGridItem(gridItem: IAnimateGridItem, index?: number) {
     // TODO: maybe check if the element already exists?
     const newIndex = index ?? this.gridItems.length;
     this.gridItems.splice(newIndex, 0, gridItem);
   }
 
-  public unregisterGridItem(gridItem: AnimateCSSGridItem) {
+  public unregisterGridItem(gridItem: IAnimateGridItem) {
     const index = this.gridItems.indexOf(gridItem);
     if (index === -1) {
       return;
@@ -199,30 +224,24 @@ export class AnimateCSSGrid {
     this.gridItems.forEach((gridItem) => gridItem.destroy());
   }
 
-  // protected and private methods
-  protected getNewId() {
-    return this.idCounter++;
-  }
-
   public forceGridAnimation() {
     this.mutationCallback('forceGridAnimation');
   }
 
-  private createInitialGridItems(gridRect: DOMRect) {
+  private createInitialGridItems() {
     this.gridItems = Array.from(this.element?.children ?? []).map((child) => {
-      const id = this.getNewId();
       // assume the child is an HTML element or else 💀
-      const gridItem = new AnimateCSSGridItem(
-        this,
-        child as HTMLElement,
-        id,
-        gridRect
-      );
+      const gridItem = new AnimateCSSGridItem(this, child as HTMLElement, {
+        absoluteAnimation: this.absoluteAnimation,
+        duration: this.duration,
+        stagger: this.stagger,
+        easing: this.easing,
+      });
 
       // setup event listeners
-      gridItemEventNames.forEach((name) => {
-        gridItem.on(name, (data) => {
-          this.eventEmitter.emit(name, data);
+      animateCSSGridEventsToItemsMap.forEach(([eventName, itemEventName]) => {
+        gridItem.on(itemEventName, (data) => {
+          this.emit(eventName, data);
         });
       });
 
@@ -242,7 +261,7 @@ export class AnimateCSSGrid {
             addedOrRemoved = true;
             return true;
           }
-          return m.attributeName === 'class'
+          return m.attributeName === 'class';
         }
       ).length;
       if (!relevantMutationHappened) {
@@ -252,15 +271,15 @@ export class AnimateCSSGrid {
     }
 
     if (this.autoRegisterChildren && addedOrRemoved) {
-      this.unregisterRemovedGridItems();
-      this.registerNewGridItems();
+      this.unregisterRemovedElements();
+      this.registerExistingElements();
     }
 
     // stop animation and reset transforms of items
     // TODO: we can probably change this, such that the animations look more smooth
     this.gridItems.forEach((gridItem) => {
       gridItem.stopAnimation();
-      gridItem.resetTransforms();
+      /* gridItem.resetTransforms(); */
     });
 
     // prepare animation of children by getting their child coordinates
@@ -268,26 +287,25 @@ export class AnimateCSSGrid {
     const affectedItems = this.gridItems.filter((gridItem) =>
       gridItem.prepareAnimation()
     );
+    /* debugger; */
 
-    await this.disableMutationsWhileFunctionRuns(() => {
+    await this.disableWhile(() => {
       // call on start
-      this.eventEmitter.emit(AnimateCSSGridEvents.START, affectedItems);
+      this.emit('start', affectedItems);
     });
 
     // start animation for children
     await Promise.allSettled(
-      affectedItems.map((gridItem, i) => {
-        return gridItem.startAnimation({
-          delay: i * this.stagger,
-          duration: this.duration,
-          easing: this.easing,
-        });
+      affectedItems.map((gridItem) => {
+        return gridItem.startAnimation();
       })
     );
 
-    await this.disableMutationsWhileFunctionRuns(() => {
+    this.recordPositions();
+
+    await this.disableWhile(() => {
       // call on end
-      this.eventEmitter.emit(AnimateCSSGridEvents.END, affectedItems);
+      this.emit('end', affectedItems);
     });
   }
 

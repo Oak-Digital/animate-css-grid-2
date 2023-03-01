@@ -2,6 +2,7 @@
 
 .grid {
   display: grid;
+  position: relative;
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   grid-template-rows: minmax(15rem, 1fr);
   grid-auto-rows: 1fr;

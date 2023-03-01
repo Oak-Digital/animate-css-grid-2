@@ -1,8 +1,14 @@
-export interface Coords {
-  translateX: number;
-  translateY: number;
+export type Transform = {
+  x: number;
+  y: number;
+  z: number;
   scaleX: number;
   scaleY: number;
-  // required to work with popmotion "from" key
-  [key: string]: number;
+  scaleZ: number;
+  rotate: number;
+  rotateX: number;
+  rotateY: number;
+  rotateZ: number;
+  skewX: number;
+  skewY: number;
 }

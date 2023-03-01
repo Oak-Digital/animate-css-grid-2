@@ -1,61 +1,76 @@
 import sync from 'framesync';
-import { tween } from 'popmotion';
-import wait from 'wait';
 import { EventEmitter } from 'eventemitter3';
 import {
+  AnimateCSSGridItemEvent,
+  AnimateCSSGridItemEventCallback,
+  AnimateCSSGridItemOptions,
+  AnimateCSSGridOptions,
   BoundingClientRect,
-  Coords,
   ItemPosition,
   PopmotionEasing,
-  StartAnimationArguments,
+  Transform,
 } from '../types';
-import { AnimateCSSGrid } from './animate-grid';
 import { arraylikeToArray } from './arrays';
-import { DATASET_ID_KEY } from './constants';
 import { popmotionEasing } from './easings';
-import {
-  applyCoordTransform,
-  baseCoords,
-  getGridAwareBoundingClientRect,
-} from './grid';
-import { AnimateCSSGridEvents } from '../types/events';
+import { applyCoordTransform } from './grid';
 import { wait2 } from './wait';
+import { IAnimateGridItem } from '../types/grid-item';
+import { IAnimateGrid } from '../types/animate-grid';
+import { mat4 } from 'gl-matrix';
+import {
+  compose,
+  fromDefinition,
+  fromTransformAttribute,
+  identity,
+  Matrix,
+  scale,
+  toCSS,
+  translate,
+} from 'transformation-matrix';
+import { animate } from 'popmotion';
+import { AnimateGridCounterScale } from './counter-scaler';
 
-export const gridItemEventNames = [
-  AnimateCSSGridEvents.ITEM_START,
-  AnimateCSSGridEvents.ITEM_END,
-  AnimateCSSGridEvents.ITEM_BEFORE_DESTROY,
-  AnimateCSSGridEvents.ITEM_AFTER_DESTROY,
-] as const;
-
-export class AnimateCSSGridItem {
-  public readonly id?: number | string;
-  public readonly animateGrid?: AnimateCSSGrid;
-  public positionData?: ItemPosition;
+export class AnimateCSSGridItem implements IAnimateGridItem {
+  public readonly animateGrid?: IAnimateGrid;
 
   private _element?: HTMLElement;
-  private _isExtracted = false;
-  private childRect: BoundingClientRect | null = null;
-  private currentFromCoords: Coords | null = null;
+
+  // Animation specific properties
+  private currentFromRect: BoundingClientRect | null = null;
+  private currentFromTransform: Matrix = identity();
+  private fromWidth: number | null = null;
+  private fromHeight: number | null = null;
+  private currentToRect: BoundingClientRect | null = null;
+  private currentToTransform: Matrix = identity();
+  private toWidth: number | null = null;
+  private toHeight: number | null = null;
+  private easing: keyof PopmotionEasing = 'easeInOut';
+  private duration: number = 250;
+  private absoluteAnimation: boolean = false;
+  private autoSetCounterScaler: boolean = true;
+  private counterScaler?: AnimateGridCounterScale;
+
   private stopAnimationFunction = () => {};
-  private eventEmitter = new EventEmitter<
-    | AnimateCSSGridEvents.ITEM_START
-    | AnimateCSSGridEvents.ITEM_END
-    | AnimateCSSGridEvents.ITEM_BEFORE_DESTROY
-    | AnimateCSSGridEvents.ITEM_AFTER_DESTROY
-  >();
+  private eventEmitter = new EventEmitter<AnimateCSSGridItemEvent>();
 
   constructor(
-    animateGrid?: AnimateCSSGrid,
+    animateGrid: IAnimateGrid,
     element?: HTMLElement,
-    id?: number | string,
-    gridRect?: DOMRect
+    {
+      easing = 'easeInOut',
+      duration = 250,
+      absoluteAnimation = false,
+      autoSetCounterScaler = true,
+    }: AnimateCSSGridItemOptions = {}
   ) {
-    this.id = id;
     this.animateGrid = animateGrid;
+    this.easing = easing;
+    this.duration = duration;
+    this.absoluteAnimation = absoluteAnimation;
+    this.autoSetCounterScaler = autoSetCounterScaler;
 
     if (element) {
-      this.registerElement(element, gridRect);
+      this.setElement(element);
     }
   }
 
@@ -63,245 +78,305 @@ export class AnimateCSSGridItem {
     return this._element;
   }
 
-  public get isExtracted() {
-    return this._isExtracted;
+  public setElement(element: HTMLElement) {
+    this._element = element;
+    this.recordPosition();
+
+    if (this.autoSetCounterScaler) {
+      const counterScalerElement = element.children?.[0];
+      if (
+        !counterScalerElement ||
+        !(counterScalerElement instanceof HTMLElement)
+      ) {
+        console.log(counterScalerElement, element);
+        /* throw new Error( */
+        /*   'AnimateCSSGridItem: The element must have a child html element to use autoSetCounterScaler' */
+        /* ); */
+        return this;
+      }
+
+      const counterScaler = new AnimateGridCounterScale(
+        counterScalerElement,
+        this
+      );
+      this.setCounterScaler(counterScaler);
+    }
+
+    return this;
   }
 
-  private set isExtracted(value: boolean) {
-    this._isExtracted = value;
+  public setCounterScaler(counterScaler: AnimateGridCounterScale) {
+    this.counterScaler = counterScaler;
+  }
+
+  public removeCounterScaler() {
+    this.counterScaler = undefined;
   }
 
   // these functions should be bound to have the correct this reference
-  public get on() {
-    return this.eventEmitter.on.bind(this.eventEmitter);
-  }
-
-  public get once() {
-    return this.eventEmitter.once.bind(this.eventEmitter);
-  }
-
-  public get off() {
-    return this.eventEmitter.off.bind(this.eventEmitter);
-  }
-
-  public registerElement(element: HTMLElement, gridRect?: DOMRect) {
-    if (this.element) {
-      throw new Error(
-        'An element is already registered to this grid item. You can only register one element per grid item.'
-      );
-    }
-    this._element = element;
-    this.recordPosition(gridRect)
-  }
-
-  // extracting means that the user can gain control over the element
-  // by setting the elements positioning to absolute and allowing the grid to
-  // reorder the other elements
-  public extract() {
-    if (this.isExtracted) {
-      return false;
-    }
-    if (!this.element || !this.positionData) {
-      return false;
-    }
-    this.isExtracted = true;
-    // translate because the element is absolutely positioned and the parent is not necessarily position relative
-    const coords = this.getPositionCoords();
-    if (!coords) {
-      return false;
-    }
-    applyCoordTransform(this.element, coords, { immediate: true });
-    this.element.style.position = 'absolute';
-    this.element.style.boxSizing = 'border-box';
-    this.element.style.width = this.positionData.rect.width + 'px';
-    this.element.style.height = this.positionData.rect.height + 'px';
-
+  public on<EventName extends AnimateCSSGridItemEvent>(
+    eventName: EventName,
+    callback: AnimateCSSGridItemEventCallback[EventName]
+  ) {
+    this.eventEmitter.on(eventName, callback);
     return this;
   }
 
-  public unExtract(resetCoords: boolean = true) {
-    if (!this.isExtracted) {
-      return false;
-    }
-    if (!this.element) {
-      return false;
-    }
-    this.isExtracted = false;
-    this.element.style.position = '';
-    this.element.style.boxSizing = '';
-    this.element.style.top = '';
-    this.element.style.left = '';
-    this.element.style.width = '';
-    this.element.style.height = '';
-    if (resetCoords) {
-      this.resetTransforms();
-    }
+  public once<EventName extends AnimateCSSGridItemEvent>(
+    eventName: EventName,
+    callback: AnimateCSSGridItemEventCallback[EventName]
+  ) {
+    this.eventEmitter.once(eventName, callback);
     return this;
   }
 
-  // this must be called before calling startAnimation
-  public prepareAnimation(gridRect?: DOMRect) {
-    // if the element is extracted it should not be affected by the grid
-    if (this.isExtracted) {
+  public off<EventName extends AnimateCSSGridItemEvent>(
+    eventName: EventName,
+    callback: AnimateCSSGridItemEventCallback[EventName]
+  ) {
+    this.eventEmitter.off(eventName, callback);
+    return this;
+  }
+
+  // Use this for type safety
+  private emit<EventName extends AnimateCSSGridItemEvent>(
+    eventName: EventName,
+    ...args: Parameters<AnimateCSSGridItemEventCallback[EventName]>
+  ) {
+    this.eventEmitter.emit(eventName, ...args);
+  }
+
+  // To make sure the element is ready to be animated, make sure to call record position at some point before calling this
+  // this must be called before calling startAnimation and should be called when the elements actual position has changed
+  // returns true if the animation was prepared
+  public prepareAnimation() {
+    /* console.log('preparing', this.element, this.currentFromRect, this.currentFromTransform) */
+    if (!this.element || !this.currentFromTransform || !this.currentFromRect) {
+      // This element is not ready to be animated
       return false;
     }
-    if (!this.element || !this.positionData) {
-      return false;
-    }
-    /* measure child element */
-    const gridBoundingClientRect =
-      gridRect ?? this.animateGrid?.getGridBoundingClientRect();
 
-    /* const child = this.element.children[0] as HTMLElement; */
-
-    /* if (!child) { */
-    /*   return false; */
-    /* } */
-    /* const rect = getGridAwareBoundingClientRect(gridBoundingClientRect, child); */
-    /* this.childRect = rect; */
-
-    /* const gridRect = */
-    /*   gridRectArg ?? this.animateGrid.getGridBoundingClientRect(); */
     // do not animate if boundingClientRect is the same as the position data since that means they haven't moved
 
-    const itemGridRect = this.getItemGridRect(gridBoundingClientRect);
+    const itemGridRect = this.getGridRelativeRect();
 
-    const itemRect = this.positionData.rect;
+    /* const itemRect = this.positionData.rect; */
+    const itemFromRect = this.currentFromRect;
 
     if (!itemGridRect) {
       return false;
     }
 
     if (
-      itemGridRect.top === itemRect.top &&
-      itemGridRect.left === itemRect.left &&
-      itemGridRect.width === itemRect.width &&
-      itemGridRect.height === itemRect.height
+      itemGridRect.top === itemFromRect.top &&
+      itemGridRect.left === itemFromRect.left &&
+      itemGridRect.width === itemFromRect.width &&
+      itemGridRect.height === itemFromRect.height
     ) {
       return false;
     }
 
-    // having more than one child in the animated item is not supported
-    if (arraylikeToArray(this.element.children).length > 1) {
-      throw new Error(
-        'Make sure every grid item has a single container element surrounding its children'
-      );
-    }
-
-    this.eventEmitter.emit(AnimateCSSGridEvents.ITEM_START, this);
-
-    const firstChild = this.element.children[0] as HTMLElement;
-    /* firstChild.style.transform = ''; */
-
-    const coords = this.calculateFromCoords();
-
-    if (!coords) {
-      return false;
-    }
-
-    this.element.style.transformOrigin = '0 0';
-    /* if (firstChild && childLeft === left && childTop === top) { */
-    /* firstChild.style.transformOrigin = '0 0'; */
+    // having more than one child in the animated item is not supported - counter scaling
+    /* if (arraylikeToArray(this.element.children).length > 1) { */
+    /*   throw new Error( */
+    /*     'Make sure every grid item has a single container element surrounding its children' */
+    /*   ); */
     /* } */
 
-    // this needs to happen imidiately so that the element is in the correct position before the animation starts
-    // TODO: figure out why this is needed
-    applyCoordTransform(this.element, coords, { immediate: true });
-    applyCoordTransform(this.element, coords);
+    /* const firstChild = this.element.children[0] as HTMLElement; */
+    /* firstChild.style.transform = ''; */
 
-    this.currentFromCoords = coords;
+    // if it is a `position: absolute` animation:
+    // - set the transform translate to the current position of the currentFromRect
+
+    const styles = this.element.style;
+    const oldTransform = styles.transform;
+    styles.transform = '';
+
+    // find curentToRect
+    const itemToRect = this.getGridRelativeRect();
+    const itemToTransform = this.getCurrentTransforms();
+    if (!itemToRect || !itemToTransform) {
+      styles.transform = oldTransform;
+      return false;
+    }
+    this.emit('start', this);
+
+    /* console.log('prepared', this); */
+
+    this.currentToRect = itemToRect;
+    this.currentToTransform = itemToTransform;
+
+    this.fromWidth = itemFromRect.width;
+    this.fromHeight = itemFromRect.height;
+    this.toWidth = itemToRect.width;
+    this.toHeight = itemToRect.height;
+
+    const { top, left } = itemFromRect;
+    if (this.absoluteAnimation) {
+      // we want to preserve the current transform and only override the translate
+      const newMatrix = compose([
+        this.currentFromTransform,
+        translate(left, top),
+      ]);
+      /* console.log(newMatrix, left, top); */
+      this.currentFromTransform = newMatrix;
+
+      this.currentToTransform = compose([
+        this.currentToTransform,
+        translate(itemToRect.left, itemToRect.top),
+      ]);
+    } else {
+      // otherwise:
+      // - set the transform translate to the current position of the currentFromRect relative to the currentToRect
+      const { top: toTop, left: toLeft } = itemToRect;
+      const newMatrix = compose([
+        this.currentFromTransform,
+        translate(
+          left - toLeft + itemToTransform.e,
+          top - toTop + itemToTransform.f
+        ),
+        scale(itemFromRect.width / itemToRect.width),
+      ]);
+      this.currentFromTransform = newMatrix;
+
+      /* styles.transform = toCSS(newMatrix); */
+    }
+
+    // At this point the styles should be set to the original position
+
+    this.element.style.transformOrigin = '0 0'; // TODO: is this needed?
+    // TODO: counter scaling
 
     return true;
+    // after all grid items have been prepared, the styles can be applied
   }
 
-  public getItemGridRect(gridRect?: DOMRect) {
-    const gridBoundingClientRect =
-      gridRect ?? this.animateGrid?.getGridBoundingClientRect();
+  // gets the rect relative to the parent grid
+  public getGridRelativeRect() {
+    // get grid rect
+    const gridRect = this.animateGrid?.getGridRect();
 
-    if (!this.element || !gridBoundingClientRect) {
+    if (!this.element || !gridRect) {
       return null;
     }
 
-    const itemGridRect = getGridAwareBoundingClientRect(
-      gridBoundingClientRect,
-      this.element
-    );
-
-    return itemGridRect;
-  }
-
-  public calculateFromCoords(): Coords | null {
-    const itemGridRect = this.getItemGridRect();
-    if (!itemGridRect || !this.positionData) {
-      return null;
-    }
-    const itemRect = this.positionData.rect;
-    return {
-      scaleX: itemRect.width / itemGridRect.width,
-      scaleY: itemRect.height / itemGridRect.height,
-      translateX: itemRect.left - itemGridRect.left,
-      translateY: itemRect.top - itemGridRect.top,
+    // subtract grid position from item position
+    const { top, left, width, height } = this.element.getBoundingClientRect();
+    const rect = {
+      top: top - gridRect.top,
+      left: left - gridRect.left,
+      width,
+      height,
     };
+
+    // if an element is display:none it will return top: 0 and left:0
+    // TODO: handle `display: none` elements
+
+    return rect;
   }
 
-  public getPositionCoords(): Coords | null {
-    if (!this.positionData) {
-      return null;
-    }
-    const itemRect = this.positionData.rect;
-    return {
-      scaleX: 1,
-      scaleY: 1,
-      translateX: itemRect.left,
-      translateY: itemRect.top,
-    };
-  }
-
-  public async startAnimation({
-    delay = 0,
-    easing = 'easeInOut',
-    duration = 250,
-  }: StartAnimationArguments) {
-    if (!this.element || !this.positionData) {
+  public async startAnimation() {
+    if (
+      !this.element ||
+      !this.currentFromTransform ||
+      !this.currentToTransform
+    ) {
       return false;
     }
 
     /* applyCoordTransform(this.element, this.currentFromCoords ?? baseCoords); */
 
-    if (delay > 0) {
-      const { promise, abort } = wait2(delay);
-      this.stopAnimationFunction = abort;
-      await promise;
+    const oldPosition = this.element.style.position;
+    const oldBoxSizing = this.element.style.boxSizing;
+    if (this.absoluteAnimation) {
+      this.element.style.position = 'absolute';
+      this.element.style.boxSizing = 'border-box';
+      // set width and height
+      this.element.style.width = `${this.currentFromRect?.width}px`;
+      this.element.style.height = `${this.currentFromRect?.height}px`;
     }
 
+    /* if (delay > 0) { */
+    /*   const { promise, abort } = wait2(delay); */
+    /*   this.stopAnimationFunction = abort; */
+    /*   await promise; */
+    /* } */
+
     const completionPromise = new Promise<void>((resolve, reject) => {
-      const { stop } = tween({
-        from: this.currentFromCoords ?? baseCoords,
-        to: baseCoords,
-        duration,
-        ease: popmotionEasing[easing],
-      }).start({
-        update: (transforms: Coords) => {
-          applyCoordTransform(this.element!, transforms);
+      if (!this.currentFromTransform || !this.currentToTransform) {
+        reject();
+        return;
+      }
+
+      const transformAnimation = animate({
+        from: toCSS(this.currentFromTransform),
+        to: toCSS(this.currentToTransform),
+        duration: this.duration, // TODO: use this from options
+        onUpdate: (value: string) => {
+          // We assume the element is not null here, and if it is, the use will get an error
+          this.element!.style.transform = value;
           // this helps prevent layout thrashing
-          sync.postRender(() => this.recordPosition());
+          sync.postRender(() => {
+            this.recordPosition();
+            this.emit('progress');
+          });
         },
-        complete: () => {
+        onComplete: () => {
           resolve();
-        },
-        error: (err: Error) => {
-          reject(err);
         },
       });
 
-      this.stopAnimationFunction = stop;
+      let whAnimation: { stop: () => void } | null = null;
+      if (
+        this.absoluteAnimation &&
+        this.currentFromRect &&
+        this.currentToRect
+      ) {
+        whAnimation = animate({
+          from: `${this.currentFromRect.width};${this.currentFromRect.height}`,
+          to: `${this.currentToRect.width};${this.currentToRect.height}`,
+          duration: this.duration, // TODO: use this from options
+          onUpdate: (value: string) => {
+            const [newWidth, newHeight] = value
+              .split(';')
+              .map((v) => parseInt(v));
+            // We assume the element is not null here, and if it is, the use will get an error
+            this.element!.style.width = `${newWidth}px`;
+            this.element!.style.height = `${newHeight}px`;
+          },
+        });
+      }
+
+      this.stopAnimationFunction = () => {
+        transformAnimation.stop();
+        if (whAnimation) {
+          whAnimation.stop();
+        }
+        resolve();
+      };
     });
 
     await completionPromise;
 
-    this.eventEmitter.emit(AnimateCSSGridEvents.ITEM_END, this);
+    this.resetTransforms();
+    if (this.absoluteAnimation) {
+      this.element.style.position = oldPosition;
+      this.element.style.boxSizing = oldBoxSizing;
+    }
+
+    // TODO: this might not be needed
+
+    this.emit('end', this);
 
     return true;
+  }
+
+  public getCurrentScale(): [number, number] {
+    return [
+      this.currentFromTransform?.a ?? 1,
+      this.currentFromTransform?.d ?? 1,
+    ];
   }
 
   public stopAnimation() {
@@ -309,54 +384,67 @@ export class AnimateCSSGridItem {
     this.stopAnimationFunction = () => {};
   }
 
-  public resetTransforms(force: boolean = false) {
-    if (!force && this.isExtracted) {
-      return;
-    }
+  public resetTransforms() {
     if (!this.element) {
       return;
     }
     this.element.style.transform = '';
+    this.element.style.width = '';
+    this.element.style.height = '';
     const firstChild = this.element.children[0] as HTMLElement;
     if (firstChild) {
       firstChild.style.transform = '';
     }
   }
 
-  protected getPositionData(gridRect?: DOMRect) {
-    const gridBoundingClientRect =
-      gridRect ?? this.animateGrid?.getGridBoundingClientRect();
-    if (!gridBoundingClientRect || !this.element) {
-      return null;
+  public getCurrentTransforms(): Matrix {
+    if (typeof window === 'undefined' || !this.element) {
+      return identity();
     }
-    const rect = getGridAwareBoundingClientRect(
-      gridBoundingClientRect,
-      this.element
+
+    const style = window.getComputedStyle(this.element);
+    const transform = style.getPropertyValue('transform');
+    if (transform === 'none') {
+      return identity();
+    }
+
+    const transformMatrix = compose(
+      fromDefinition(fromTransformAttribute(transform))
     );
-    return {
-      rect,
-      gridBoundingClientRect,
-    };
+
+    return transformMatrix;
   }
 
-  public recordPosition(gridRect?: DOMRect) {
-    const newPosition = this.getPositionData(gridRect);
-    if (!newPosition) {
-      return;
+  public getCurrentRect() {
+    if (!this.element) {
+      return null;
     }
-    this.positionData = newPosition;
+
+    return this.element.getBoundingClientRect();
+  }
+
+  public recordPosition() {
+    const newTransforms = this.getCurrentTransforms();
+    const newRect = this.getGridRelativeRect();
+    /* console.log('recording position', newTransforms, newRect); */
+    if (newTransforms) {
+      this.currentFromTransform = newTransforms;
+    }
+    if (newRect) {
+      this.currentFromRect = newRect;
+    }
+
+    return this;
   }
 
   public destroy() {
-    this.eventEmitter.emit(AnimateCSSGridEvents.ITEM_BEFORE_DESTROY, this);
+    this.emit('beforeDestroy', this);
     // stop animation
     this.stopAnimationFunction();
     // reset transforms
-    if (this.element) {
-      this.element.style.transform = '';
-    }
+    this.resetTransforms();
 
-    this.eventEmitter.emit(AnimateCSSGridEvents.ITEM_AFTER_DESTROY, this);
+    this.emit('afterDestroy', this);
 
     // remove event listeners
     this.eventEmitter.removeAllListeners();
