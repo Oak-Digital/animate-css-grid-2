@@ -2,7 +2,7 @@ import { AnimateCSSGridEvent, AnimateCSSGridEventCallback } from "./events";
 import { IAnimateGridItem } from "./grid-item";
 
 export interface IAnimateGrid {
-    registerElement(element: HTMLElement): this;
+    registerElement(element: HTMLElement): IAnimateGridItem;
     unregisterElement(element: HTMLElement | IAnimateGridItem): void;
     // This function should register new grid items
     registerExistingElements(): void;

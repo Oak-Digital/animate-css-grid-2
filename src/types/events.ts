@@ -30,6 +30,8 @@ export const animateCSSGridItemEvents = [
   'progress',
   'beforeDestroy',
   'afterDestroy',
+  'extracted',
+  'unextracted',
 ] as const;
 
 export type AnimateCSSGridItemEvent = typeof animateCSSGridItemEvents[number];
@@ -40,6 +42,8 @@ export type AnimateCSSGridItemEventCallback = {
   progress: () => void;
   beforeDestroy: (item: IAnimateGridItem) => void;
   afterDestroy: (item: IAnimateGridItem) => void;
+  extracted: (item: IAnimateGridItem) => void;
+  unextracted: (item: IAnimateGridItem) => void;
 };
 
 export const animateCSSGridEventsToItemsMap = [

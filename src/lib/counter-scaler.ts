@@ -25,6 +25,11 @@ export class AnimateGridCounterScale {
     this._gridItem.off('progress', this.onProgressFunction);
   }
 
+
+  public reset() {
+    this._element.style.transform = '';
+  }
+
   public destroy() {
     this.removeListeners();
   }

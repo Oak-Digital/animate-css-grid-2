@@ -11,6 +11,7 @@
 </head>
 
 <body>
+  <h2><code>mode: static</code></h2>
   <div class="scroll-example">
     <div class="card--1">1</div>
     <div class="card--2">2</div>
@@ -24,6 +25,7 @@
     <div class="card--2">19</div>
   </div>
   <div class="p-4">
+    <h2><code>mode: absolute</code> <code>animateWidthHeight: true</code></h2>
     <div class="mb-4">
       <p>click a card to expand it</p>
       <button class="btn js-toggle-grid">toggle grid size</button>
@@ -99,7 +101,7 @@
 
       <div class="card card--1">
       </div>
-      <div class="card card--2">
+      <div class="card card--2" id="fade-card" data-animgrid-auto-ignore>
         <div>
           <div class="card__avatar"></div>
           <div class="card__title"></div>
@@ -116,8 +118,70 @@
 
     </div>
   </div>
+  <h2><code>mode: static</code></h2>
   <div class="p-4">
-    <div class="subjects">
+    <div class="subjects subjects-static" id="subjects-static">
+      <section class="subject subject--active">
+        <div>
+          <h2 class="subject__title">
+            Title One
+          </h2>
+          <div class="subject__content">
+            Lorem ipsum dolor sit amet consectetur adipisicing elit. Velit, sequi quas porro blanditiis distinctio consequatur minima
+            optio vero eaque autem. Odit enim totam rem officia quae iste placeat labore similique?
+          </div>
+        </div>
+      </section>
+      <section class="subject">
+        <div>
+          <h2 class="subject__title">
+            Title Two
+          </h2>
+          <div class="subject__content">
+            Lorem ipsum dolor sit amet consectetur adipisicing elit. Velit, sequi quas porro blanditiis distinctio consequatur minima
+            optio vero eaque autem. Odit enim totam rem officia quae iste placeat labore similique?
+          </div>
+        </div>
+      </section>
+      <section class="subject">
+        <div>
+          <h2 class="subject__title">
+            Title Three
+          </h2>
+          <div class="subject__content">
+            Lorem ipsum dolor sit amet consectetur adipisicing elit. Velit, sequi quas porro blanditiis distinctio consequatur minima
+            optio vero eaque autem. Odit enim totam rem officia quae iste placeat labore similique?
+          </div>
+        </div>
+      </section>
+      <section class="subject">
+        <div>
+          <h2 class="subject__title">
+            Title Four
+          </h2>
+          <div class="subject__content">
+            Lorem ipsum dolor sit amet consectetur adipisicing elit. Velit, sequi quas porro blanditiis distinctio consequatur minima
+            optio vero eaque autem. Odit enim totam rem officia quae iste placeat labore similique?
+          </div>
+        </div>
+      </section>
+      <section class="subject">
+        <div>
+          <h2 class="subject__title">
+            Title Five
+          </h2>
+          <div class="subject__content">
+            Lorem ipsum dolor sit amet consectetur adipisicing elit. Velit, sequi quas porro blanditiis distinctio consequatur minima
+            optio vero eaque autem. Odit enim totam rem officia quae iste placeat labore similique?
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+    <h2><code>mode: absolute</code> <code>itemAnimateWidthHeight: true</code></h2>
+  <div class="p-4">
+    <div class="subjects" id="subjects">
       <section class="subject subject--active">
         <div>
           <h2 class="subject__title">
@@ -180,7 +244,6 @@
   <div class="p-4">
     <div class="nested-grid"></div>
   </div>
-
 
   <div class="p-4">
     <div class="mb-4">

@@ -1,5 +1,6 @@
 import { animate } from 'popmotion';
-import { AnimateCSSGrid } from '../src/index';
+import { compose, rotate, scale } from 'transformation-matrix';
+import { AnimateCSSGrid, AnimateCSSGridItem } from '../src/index';
 import { arraylikeToArray } from '../src/lib/arrays';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -58,8 +59,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const ag2 = new AnimateCSSGrid(grid, {
     easing: 'backOut',
+    mode: 'absolute',
     /* duration: 6000, */
-    absoluteAnimation: true,
+    modeOptions: {
+      /* itemAnimateWidthHeight: true, */
+      animateWidthHeight: true,
+    }
   });
 
   /* ag2.recordPositions(); */
@@ -81,19 +86,40 @@ document.addEventListener('DOMContentLoaded', () => {
   // // ========================================================
 
   const gridFade = document.querySelector<HTMLElement>('.grid-fade')!;
+  const fadeCard = document.querySelector<HTMLElement>(
+    '#fade-card'
+  );
 
-  const agFade = new AnimateCSSGrid(gridFade, {
+  const fadeOptions = {
     easing: 'backOut',
-  });
+  };
+  const agFade = new AnimateCSSGrid(gridFade, fadeOptions);
+
+  const fadeCardItem = new AnimateCSSGridItem(agFade, fadeCard!, fadeOptions);
+  agFade.registerElement(fadeCardItem);
 
   const gridFadeCard = document.querySelector<HTMLElement>(
     '.grid-fade .card--2'
   )!;
-  let expanded = true;
+  let cardHidden = false;
   gridFade.addEventListener('click', () => {
-    if (expanded) {
-      gridFadeCard.style.display = 'block';
-      /* agFade.extractChild(gridFadeCard); */
+    if (cardHidden) {
+      gridFadeCard.style.display = '';
+      fadeCardItem.unExtract();
+      animate({
+        from: 0,
+        to: 1,
+        duration: 500,
+        onUpdate: (v: any) => {
+          gridFadeCard.style.opacity = `${v}`;
+        },
+        onComplete: () => {
+          /* gridFadeCard.style.display = 'none'; */
+        },
+      });
+    } else {
+      gridFadeCard.style.display = '';
+      fadeCardItem.extract();
       animate({
         from: 1,
         to: 0,
@@ -105,40 +131,57 @@ document.addEventListener('DOMContentLoaded', () => {
           gridFadeCard.style.display = 'none';
         },
       });
-    } else {
-      gridFadeCard.style.display = 'block';
-      animate({
-        from: 0,
-        to: 1,
-        duration: 500,
-        onUpdate: (v: any) => {
-          gridFadeCard.style.opacity = `${v}`;
-        },
-        onComplete: () => {
-          gridFadeCard.style.display = 'block';
-        },
-      });
     }
-    expanded = !expanded;
+    cardHidden = !cardHidden;
   });
 
   // // ========================================================
   // // accordion test
   // // ========================================================
 
-  const subjects = document.querySelector<HTMLElement>('.subjects')!;
+  const subjects = document.querySelector<HTMLElement>('#subjects')!;
 
   // animate the grid
   const agSubjects = new AnimateCSSGrid(subjects, {
     easing: 'linear',
     duration: 300,
     /* absoluteAnimation: true, */
+    mode: 'absolute',
+    modeOptions: {
+      itemAnimateWidthHeight: true,
+    },
   });
 
   // add a click handler
   subjects.addEventListener('click', (ev) => {
     [
-      ...arraylikeToArray(document.querySelectorAll<HTMLElement>('.subject')),
+      ...arraylikeToArray(document.querySelectorAll<HTMLElement>('#subjects .subject')),
+    ].forEach((el) => el.classList.remove('subject--active'));
+    let target = <HTMLElement>ev.target;
+    while (target !== document.body) {
+      if (target.classList.contains('subject')) {
+        target.classList.toggle('subject--active');
+        return;
+      }
+      target = target.parentElement!;
+    }
+  });
+
+
+  const subjectsStatic = document.querySelector<HTMLElement>('#subjects-static')!;
+
+  // animate the grid
+  const agSubjectsStatic = new AnimateCSSGrid(subjectsStatic, {
+    easing: 'linear',
+    duration: 300,
+    /* absoluteAnimation: true, */
+    mode: 'static',
+  });
+
+  // add a click handler
+  subjectsStatic.addEventListener('click', (ev) => {
+    [
+      ...arraylikeToArray(document.querySelectorAll<HTMLElement>('#subjects-static .subject')),
     ].forEach((el) => el.classList.remove('subject--active'));
     let target = <HTMLElement>ev.target;
     while (target !== document.body) {
@@ -172,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
     agChange.forceGridAnimation();
   };
 
-  setInterval(updateContents, 2000);
+  /* setInterval(updateContents, 2000); */
 
   // ========================================================
   // nested grid
@@ -277,5 +320,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   new AnimateCSSGrid(scrollTest, {
     duration: 2000,
+    mode: 'static',
   });
 });

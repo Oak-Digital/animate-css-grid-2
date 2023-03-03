@@ -4,6 +4,8 @@ import {
   AnimateCSSGridItemEvent,
   AnimateCSSGridItemEventCallback,
   AnimateCSSGridItemOptions,
+  AnimateCSSGridMode,
+  AnimateCSSGridModeOptions,
   BoundingClientRect,
   PopmotionEasing,
 } from '../types';
@@ -16,17 +18,29 @@ import {
   fromTransformAttribute,
   identity,
   Matrix,
+  rotate,
   scale,
   toCSS,
   translate,
 } from 'transformation-matrix';
 import { animate } from 'popmotion';
 import { AnimateGridCounterScale } from './counter-scaler';
+import { DEFAULT_DURATION } from './constants';
 
-export class AnimateCSSGridItem implements IAnimateGridItem {
+const defaultModeOptions: Required<AnimateCSSGridModeOptions> = {
+  absolute: {
+    animateWidthHeight: false,
+    itemAnimateWidthHeight: false,
+  },
+  static: {},
+};
+
+export class AnimateCSSGridItem<Mode extends AnimateCSSGridMode = 'absolute'>
+  implements IAnimateGridItem
+{
   public readonly animateGrid?: IAnimateGrid;
 
-  private _element?: HTMLElement;
+  private _element: HTMLElement;
 
   // Animation specific properties
   private currentFromRect: BoundingClientRect | null = null;
@@ -38,32 +52,50 @@ export class AnimateCSSGridItem implements IAnimateGridItem {
   private toWidth: number | null = null;
   private toHeight: number | null = null;
   private easing: keyof PopmotionEasing = 'easeInOut';
-  private duration: number = 250;
-  private absoluteAnimation: boolean = false;
+  private duration: number = DEFAULT_DURATION;
   private autoSetCounterScaler: boolean = true;
   private counterScaler?: AnimateGridCounterScale;
+  private mode: Mode = 'absolute' as Mode;
+  private animateWidthHeight: boolean;
+  private extracted: boolean = false;
 
   private stopAnimationFunction = () => {};
   private eventEmitter = new EventEmitter<AnimateCSSGridItemEvent>();
 
   constructor(
     animateGrid: IAnimateGrid,
-    element?: HTMLElement,
+    element: HTMLElement,
     {
       easing = 'easeInOut',
-      duration = 250,
-      absoluteAnimation = false,
+      duration = DEFAULT_DURATION,
       autoSetCounterScaler = true,
-    }: AnimateCSSGridItemOptions = {}
+      mode = 'absolute' as Mode,
+      modeOptions = {},
+    }: AnimateCSSGridItemOptions<Mode> = {}
   ) {
     this.animateGrid = animateGrid;
     this.easing = easing;
     this.duration = duration;
-    this.absoluteAnimation = absoluteAnimation;
     this.autoSetCounterScaler = autoSetCounterScaler;
+    this.mode = mode;
 
-    if (element) {
-      this.setElement(element);
+    if (mode === 'absolute') {
+      const mOptions = modeOptions as AnimateCSSGridModeOptions['absolute'];
+      this.animateWidthHeight = mOptions.itemAnimateWidthHeight ?? false;
+      if (this.animateWidthHeight) {
+        this.autoSetCounterScaler = false;
+      }
+    } else if (mode === 'static') {
+      const mOptions = modeOptions as AnimateCSSGridModeOptions['static'];
+      this.animateWidthHeight = false;
+    } else {
+      throw new Error('AnimateCSSGridItem: Invalid mode');
+    }
+
+    this._element = element;
+    this.recordPosition();
+    if (this.autoSetCounterScaler) {
+      this.findAndSetCounterScaler();
     }
   }
 
@@ -71,31 +103,56 @@ export class AnimateCSSGridItem implements IAnimateGridItem {
     return this._element;
   }
 
-  public setElement(element: HTMLElement) {
-    this._element = element;
-    this.recordPosition();
+  public extract() {
+    this.extracted = true;
+    /* TODO: should we really stop animation here */
+    this.stopAnimation();
+    // Set border box
+    this.element.style.boxSizing = 'border-box';
+    this.element.style.position = 'absolute';
 
-    if (this.autoSetCounterScaler) {
-      const counterScalerElement = element.children?.[0];
-      if (
-        !counterScalerElement ||
-        !(counterScalerElement instanceof HTMLElement)
-      ) {
-        console.log(counterScalerElement, element);
-        /* throw new Error( */
-        /*   'AnimateCSSGridItem: The element must have a child html element to use autoSetCounterScaler' */
-        /* ); */
-        return this;
-      }
+    if (!this.currentFromRect) {
+      this.currentFromRect = this.element.getBoundingClientRect();
+    }
+    this.applyWidthHeight(
+      this.currentFromRect.width,
+      this.currentFromRect.height
+    );
+    this.element.style.left = `${this.currentFromRect.left}px`;
+    this.element.style.top = `${this.currentFromRect.top}px`;
 
-      const counterScaler = new AnimateGridCounterScale(
-        counterScalerElement,
-        this
-      );
-      this.setCounterScaler(counterScaler);
+    this.emit('extracted', this);
+  }
+
+  public unExtract() {
+    this.extracted = false;
+    this.element.style.position = '';
+    this.element.style.width = '';
+    this.element.style.height = '';
+    this.element.style.left = '';
+    this.element.style.top = '';
+
+    this.emit('unextracted', this);
+  }
+
+  public findAndSetCounterScaler() {
+    const counterScalerElement = this.element.children?.[0];
+    if (
+      !counterScalerElement ||
+      !(counterScalerElement instanceof HTMLElement)
+    ) {
+      /* throw new Error( */
+      /*   'AnimateCSSGridItem: The element must have a child html element to use autoSetCounterScaler' */
+      /* ); */
+      return null;
     }
 
-    return this;
+    const counterScaler = new AnimateGridCounterScale(
+      counterScalerElement,
+      this
+    );
+    this.setCounterScaler(counterScaler);
+    return counterScaler;
   }
 
   public setCounterScaler(counterScaler: AnimateGridCounterScale) {
@@ -144,7 +201,7 @@ export class AnimateCSSGridItem implements IAnimateGridItem {
   // returns true if the animation was prepared
   public prepareAnimation() {
     /* console.log('preparing', this.element, this.currentFromRect, this.currentFromTransform) */
-    if (!this.element || !this.currentFromTransform || !this.currentFromRect) {
+    if (!this.currentFromTransform || !this.currentFromRect || this.extracted) {
       // This element is not ready to be animated
       return false;
     }
@@ -161,7 +218,7 @@ export class AnimateCSSGridItem implements IAnimateGridItem {
     }
 
     if (
-      !this.absoluteAnimation &&
+      this.mode !== 'absolute' &&
       itemGridRect.top === itemFromRect.top &&
       itemGridRect.left === itemFromRect.left &&
       itemGridRect.width === itemFromRect.width &&
@@ -170,28 +227,18 @@ export class AnimateCSSGridItem implements IAnimateGridItem {
       return false;
     }
 
-    // having more than one child in the animated item is not supported - counter scaling
-    /* if (arraylikeToArray(this.element.children).length > 1) { */
-    /*   throw new Error( */
-    /*     'Make sure every grid item has a single container element surrounding its children' */
-    /*   ); */
-    /* } */
-
-    /* const firstChild = this.element.children[0] as HTMLElement; */
-    /* firstChild.style.transform = ''; */
-
     // if it is a `position: absolute` animation:
     // - set the transform translate to the current position of the currentFromRect
 
     const styles = this.element.style;
-    const oldTransform = styles.transform;
+    /* const oldTransform = styles.transform; */
     styles.transform = '';
 
     // find curentToRect
     const itemToRect = this.getGridRelativeRect();
     const itemToTransform = this.getCurrentTransforms();
     if (!itemToRect || !itemToTransform) {
-      styles.transform = oldTransform;
+      /* styles.transform = oldTransform; */
       return false;
     }
     this.emit('start', this);
@@ -207,11 +254,26 @@ export class AnimateCSSGridItem implements IAnimateGridItem {
     this.toHeight = itemToRect.height;
 
     const { top, left } = itemFromRect;
-    if (this.absoluteAnimation) {
+    if (this.mode === 'absolute') {
       // we want to preserve the current transform and only override the translate
       const newMatrix = compose([
+        // THIS IS THE ERROR
         this.currentFromTransform,
+        translate(-this.currentFromTransform.e, -this.currentFromTransform.f),
         translate(left, top),
+        // remember that the width and height are applied at the start
+        ...(this.animateWidthHeight
+          ? []
+          : [
+              scale(
+                1 / this.currentFromTransform.a,
+                1 / this.currentFromTransform.d
+              ),
+              scale(
+                itemFromRect.width / itemToRect.width,
+                itemFromRect.height / itemToRect.height
+              ),
+            ]),
       ]);
       /* console.log(newMatrix, left, top); */
       this.currentFromTransform = newMatrix;
@@ -220,21 +282,20 @@ export class AnimateCSSGridItem implements IAnimateGridItem {
         this.currentToTransform,
         translate(itemToRect.left, itemToRect.top),
       ]);
+      /* console.log(this.currentToTransform); */
     } else {
       // otherwise:
       // - set the transform translate to the current position of the currentFromRect relative to the currentToRect
       const { top: toTop, left: toLeft } = itemToRect;
       const newMatrix = compose([
-        this.currentFromTransform,
-        translate(
-          left - toLeft + itemToTransform.e,
-          top - toTop + itemToTransform.f
+        translate(left - toLeft, top - toTop),
+        scale(
+          itemFromRect.width / itemToRect.width,
+          itemFromRect.height / itemToRect.height
         ),
-        scale(itemFromRect.width / itemToRect.width, itemFromRect.height / itemToRect.height),
+        /* rotate(this.currentFromTransform.b, this.currentFromTransform.c), */
       ]);
       this.currentFromTransform = newMatrix;
-
-      /* styles.transform = toCSS(newMatrix); */
     }
 
     // At this point the styles should be set to the original position
@@ -246,32 +307,31 @@ export class AnimateCSSGridItem implements IAnimateGridItem {
     // after all grid items have been prepared, the styles can be applied
   }
 
-  public afterPrepareAnimation() {
-    if (!this.element) {
-      return;
-    }
-
-    // TODO: this might be overkill, so it should be refactored
-
-    // apply the styles
+  private afterPrepareStyles() {
     this.applyTransforms(this.currentFromTransform);
-    if (this.currentFromRect && this.absoluteAnimation) {
-      this.applyWidthHeight(this.currentFromRect?.width, this.currentFromRect?.height);
+    if (this.currentFromRect && this.mode === 'absolute') {
+      if (this.animateWidthHeight) {
+        this.applyWidthHeight(
+          this.currentFromRect.width,
+          this.currentFromRect.height
+        );
+      } else if (this.currentToRect) {
+        this.applyWidthHeight(
+          this.currentToRect.width,
+          this.currentToRect.height
+        );
+      }
+      this.element.style.boxSizing = 'border-box';
       this.element.style.position = 'absolute';
     }
     this.emit('progress');
+  }
 
-    sync.postRender(() => {
-      if (!this.element) {
-        return;
-      }
-      this.applyTransforms(this.currentFromTransform);
-      if (this.currentFromRect && this.absoluteAnimation) {
-        this.applyWidthHeight(this.currentFromRect?.width, this.currentFromRect?.height);
-        this.element.style.position = 'absolute';
-      }
-      this.emit('progress');
-    })
+  public afterPrepareAnimation() {
+    this.afterPrepareStyles();
+    sync.render(() => {
+      this.afterPrepareStyles();
+    });
   }
 
   // gets the rect relative to the parent grid
@@ -311,14 +371,30 @@ export class AnimateCSSGridItem implements IAnimateGridItem {
 
     const oldPosition = this.element.style.position;
     const oldBoxSizing = this.element.style.boxSizing;
-    if (this.absoluteAnimation) {
-      this.element.style.position = 'absolute';
-      this.element.style.boxSizing = 'border-box';
-      // set width and height
-      this.element.style.width = `${this.currentFromRect?.width}px`;
-      this.element.style.height = `${this.currentFromRect?.height}px`;
+    if (this.mode === 'absolute') {
+      sync.render(() => {
+        this.element.style.position = 'absolute';
+        this.element.style.boxSizing = 'border-box';
+        // set width and height
+        if (this.animateWidthHeight) {
+          if (this.currentFromRect) {
+            this.applyWidthHeight(
+              this.currentFromRect?.width,
+              this.currentFromRect?.height
+            );
+          }
+        } else {
+          if (this.currentToRect) {
+            this.applyWidthHeight(
+              this.currentToRect?.width,
+              this.currentToRect?.height
+            );
+          }
+        }
+      });
     }
 
+    // TODO: Use this to implement stagger
     /* if (delay > 0) { */
     /*   const { promise, abort } = wait2(delay); */
     /*   this.stopAnimationFunction = abort; */
@@ -337,9 +413,9 @@ export class AnimateCSSGridItem implements IAnimateGridItem {
         duration: this.duration, // TODO: use this from options
         onUpdate: (value: string) => {
           // We assume the element is not null here, and if it is, the use will get an error
-          this.element!.style.transform = value;
           // this helps prevent layout thrashing
-          sync.postRender(() => {
+          sync.render(() => {
+            this.element!.style.transform = value;
             this.recordPosition();
             this.emit('progress');
           });
@@ -347,11 +423,14 @@ export class AnimateCSSGridItem implements IAnimateGridItem {
         onComplete: () => {
           resolve();
         },
+        onStop: () => {
+          /* reject(); */
+        },
       });
 
       let whAnimation: { stop: () => void } | null = null;
       if (
-        this.absoluteAnimation &&
+        this.animateWidthHeight &&
         this.currentFromRect &&
         this.currentToRect
       ) {
@@ -360,12 +439,12 @@ export class AnimateCSSGridItem implements IAnimateGridItem {
           to: `${this.currentToRect.width};${this.currentToRect.height}`,
           duration: this.duration, // TODO: use this from options
           onUpdate: (value: string) => {
-            const [newWidth, newHeight] = value
-              .split(';')
-              .map((v) => parseInt(v));
+            const [newWidth, newHeight] = value.split(';');
             // We assume the element is not null here, and if it is, the use will get an error
-            this.element!.style.width = `${newWidth}px`;
-            this.element!.style.height = `${newHeight}px`;
+            sync.render(() => {
+              this.element!.style.width = `${newWidth}px`;
+              this.element!.style.height = `${newHeight}px`;
+            });
           },
         });
       }
@@ -382,10 +461,6 @@ export class AnimateCSSGridItem implements IAnimateGridItem {
     await completionPromise;
 
     this.resetTransforms();
-    if (this.absoluteAnimation) {
-      this.element.style.position = '';
-      this.element.style.boxSizing = oldBoxSizing;
-    }
 
     // TODO: this might not be needed
 
@@ -406,17 +481,18 @@ export class AnimateCSSGridItem implements IAnimateGridItem {
     this.stopAnimationFunction = () => {};
   }
 
-  public resetTransforms() {
-    if (!this.element) {
+  public resetTransforms(force: boolean = false) {
+    if (this.extracted && !force) {
       return;
     }
     this.element.style.transform = '';
-    this.element.style.width = '';
-    this.element.style.height = '';
-    const firstChild = this.element.children[0] as HTMLElement;
-    if (firstChild) {
-      firstChild.style.transform = '';
+    if (this.mode === 'absolute') {
+      this.element.style.position = '';
+      this.element.style.boxSizing = '';
+      this.element.style.width = '';
+      this.element.style.height = '';
     }
+    this.counterScaler?.reset();
   }
 
   public getCurrentTransforms(): Matrix {
