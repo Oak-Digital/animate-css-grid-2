@@ -9,6 +9,9 @@ export interface IAnimateGridItem {
     startAnimation(): void;
     stopAnimation(): void;
 
+    extract(): void;
+    unExtract(): void;
+
     resetTransforms(): void;
 
     on<EventName extends AnimateCSSGridItemEvent>(eventName: EventName, callback: AnimateCSSGridItemEventCallback[EventName]): this;

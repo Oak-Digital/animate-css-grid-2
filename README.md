@@ -84,19 +84,29 @@ ag.once(eventName, yourFunction)
 // remove event listener
 ag.off(eventName, yourFunction)
 
-// takes the html element out of the grid with position absolute
-// and let's you do what you want with it, for example fading it out
-ag.extractChild(HTMLElement)
-
-// removes position absolute from the child, so it can be part of the grid again
-ag.unExtractChild(HTMLElement)
-
 // force a grid animation - do this if you only change styles
 // or something else that does not trigger the animation
 ag.forceGridAnimation()
 
 // removes all event listeners and the animations will no longer work
 ag.destroy()
+```
+
+The `AnimateCSSGridItem` instances also have some methods which are important
+
+```js
+// same kind of event handling as the grid,. but different events
+gridItem.on
+gridItem.once
+gridItem.off
+
+// This method "extracts" the item from the grid, by apply `position: absolute` and setting width, height, left and right.
+gridItem.extract()
+// This method restores the extraction
+gridItem.unExtract()
+
+// removes everything on the instance
+gridItem.destroy()
 ```
 
 ### Events
@@ -148,12 +158,6 @@ The `animate-css-grid` library can easily be used with frameworks like React or 
 For Vue you can use [`vue-animate-css-grid`](https://github.com/Oak-Digital/vue-animate-css-grid)
 
 Check out the [React example](https://codepen.io/aholachek/pen/mxwvmV)
-
-## Roadmap
-
-- [ ] ability to animate width and height of elements, so text doesn't jump, but slowly becomes smaller or larger
-- [ ] option for animating height (and width) of the grid, so it looks more natural. Instead of scaling.
-- [ ] investigate which animation library to use with a small footprint
 
 ## Publishing
 
