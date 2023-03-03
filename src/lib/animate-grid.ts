@@ -362,7 +362,7 @@ export class AnimateCSSGrid<Mode extends AnimateCSSGridMode = 'absolute'> implem
       this.element.style.width = `${from[0]}px`;
       this.element.style.height = `${from[1]}px`;
     })
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<void>((resolve) => {
       const animation = animate({
         from: `${from[0]};${from[1]}`,
         to: `${to[0]};${to[1]}`,

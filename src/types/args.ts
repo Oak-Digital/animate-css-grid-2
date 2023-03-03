@@ -1,5 +1,4 @@
 import { Easing } from 'popmotion';
-import { PopmotionEasing } from './third-party/popmotion';
 
 export type AnimateCSSGridMode = 'absolute' | 'static';
 export type AnimateCSSGridModeOptions = {
