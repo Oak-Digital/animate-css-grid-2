@@ -119,7 +119,7 @@ The grid can be animated in different modes, which require some different setup.
 #### `mode: 'static'`
 
 This is the simplest mode, which does not require any extra css setup to work.
-The elements will be animated with transforms
+The elements will be animated with transforms and is generally the most smooth option with a lot of elements.
 
 #### `mode: 'absolute'` (default)
 

@@ -238,6 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const agNested = new AnimateCSSGrid(nestedGrid, {
     duration: 300,
+    mode: 'static',
   });
 
   nestedGrid.addEventListener('click', (ev) => {
