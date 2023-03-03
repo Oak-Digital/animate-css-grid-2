@@ -1,5 +1,4 @@
-import { animate } from 'popmotion';
-import { compose, rotate, scale } from 'transformation-matrix';
+import { animate, backOut, linear } from 'popmotion';
 import { AnimateCSSGrid, AnimateCSSGridItem } from '../src/index';
 import { arraylikeToArray } from '../src/lib/arrays';
 
@@ -41,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
   /*   document.querySelector<HTMLElement>('.grid .card--2')!; */
   /* console.log(gridIgnoreElement); */
   const ag = new AnimateCSSGrid(grid, {
-    easing: 'backOut',
+    easing: backOut,
   });
 
   ag.on('start', (els) => {
@@ -58,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('unwrapped');
 
   const ag2 = new AnimateCSSGrid(grid, {
-    easing: 'backOut',
+    easing: backOut,
     mode: 'absolute',
     /* duration: 6000, */
     modeOptions: {
@@ -91,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
   );
 
   const fadeOptions = {
-    easing: 'backOut',
+    easing: backOut,
   };
   const agFade = new AnimateCSSGrid(gridFade, fadeOptions);
 
@@ -143,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // animate the grid
   const agSubjects = new AnimateCSSGrid(subjects, {
-    easing: 'linear',
+    easing: linear,
     duration: 300,
     /* absoluteAnimation: true, */
     mode: 'absolute',
@@ -172,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // animate the grid
   const agSubjectsStatic = new AnimateCSSGrid(subjectsStatic, {
-    easing: 'linear',
+    easing: linear,
     duration: 300,
     /* absoluteAnimation: true, */
     mode: 'static',
@@ -304,7 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   new AnimateCSSGrid(hiddenCardGrid!, {
     stagger: 300,
-    easing: 'backOut',
+    easing: backOut,
     duration: 4000,
   });
 

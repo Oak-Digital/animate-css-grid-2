@@ -14,14 +14,14 @@ import { AnimateCSSGridItem } from './grid-item';
 import EventEmitter from 'eventemitter3';
 import { IAnimateGridItem } from '../types/grid-item';
 import { IAnimateGrid } from '../types/animate-grid';
-import { animate } from 'popmotion';
+import { animate, easeInOut, Easing } from 'popmotion';
 import sync, { cancelSync, Process } from 'framesync';
 import { AUTO_IGNORE_DATASET } from './constants';
 
 export class AnimateCSSGrid<Mode extends AnimateCSSGridMode = 'absolute'> implements IAnimateGrid {
   // protected and private properties
   private _element: HTMLElement;
-  private _easing: keyof PopmotionEasing = 'easeInOut';
+  private _easing: Easing = easeInOut;
   private mutationsDisabled = false;
   private gridItems: IAnimateGridItem[] = [];
   private resizeFunction = () => {};
@@ -44,7 +44,7 @@ export class AnimateCSSGrid<Mode extends AnimateCSSGridMode = 'absolute'> implem
     {
       duration = 250,
       stagger = 0,
-      easing = 'easeInOut',
+      easing = easeInOut,
       autoRegisterChildren = true,
       mode,
       modeOptions = {},
@@ -135,7 +135,7 @@ export class AnimateCSSGrid<Mode extends AnimateCSSGridMode = 'absolute'> implem
     return this._easing;
   }
 
-  public set easing(easing: keyof PopmotionEasing) {
+  public set easing(easing: Easing) {
     this._easing = easing;
   }
 
@@ -366,6 +366,7 @@ export class AnimateCSSGrid<Mode extends AnimateCSSGridMode = 'absolute'> implem
       const animation = animate({
         from: `${from[0]};${from[1]}`,
         to: `${to[0]};${to[1]}`,
+        ease: this.easing,
         duration: this.duration,
         /* easing: this.easing, */
         onUpdate: (value: string) => {

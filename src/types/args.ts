@@ -1,3 +1,4 @@
+import { Easing } from 'popmotion';
 import { PopmotionEasing } from './third-party/popmotion';
 
 export type AnimateCSSGridMode = 'absolute' | 'static';
@@ -12,7 +13,7 @@ export type AnimateCSSGridModeOptions = {
 export type AnimateCSSGridOptions<Mode extends AnimateCSSGridMode> = {
   duration?: number;
   stagger?: number;
-  easing?: string;
+  easing?: Easing;
   autoRegisterChildren?: boolean;
   mode?: Mode;
   modeOptions?: AnimateCSSGridModeOptions[Mode];
@@ -20,7 +21,7 @@ export type AnimateCSSGridOptions<Mode extends AnimateCSSGridMode> = {
 
 export type AnimateCSSGridItemOptions<Mode extends AnimateCSSGridMode> = {
   duration?: number;
-  easing?: string;
+  easing?: Easing;
   absoluteAnimation?: boolean;
   autoSetCounterScaler?: boolean;
   mode?: Mode;

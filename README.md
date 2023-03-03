@@ -56,11 +56,12 @@ Optional config object:
 ```js
 {
   // int: default is 0 ms
-  stagger: 100,
+  // stagger: 100, // Not yet supported
   // int: default is 250 ms
   duration: 500
-  // string: default is 'easeInOut'
-  easing: 'backInOut',
+  // string: default is easeInOut
+  // easings are just a '(v:number) => number' function and can be imported from popmotion
+  easing: backInOut,
   // see ## Modes
   mode: 'absolute',
   modeOptions: {},

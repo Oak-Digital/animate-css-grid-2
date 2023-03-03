@@ -23,7 +23,7 @@ import {
   toCSS,
   translate,
 } from 'transformation-matrix';
-import { animate } from 'popmotion';
+import { animate, easeInOut, Easing } from 'popmotion';
 import { AnimateGridCounterScale } from './counter-scaler';
 import { DEFAULT_DURATION } from './constants';
 
@@ -51,7 +51,7 @@ export class AnimateCSSGridItem<Mode extends AnimateCSSGridMode = 'absolute'>
   private currentToTransform: Matrix = identity();
   private toWidth: number | null = null;
   private toHeight: number | null = null;
-  private easing: keyof PopmotionEasing = 'easeInOut';
+  private easing: Easing;
   private duration: number = DEFAULT_DURATION;
   private autoSetCounterScaler: boolean = true;
   private counterScaler?: AnimateGridCounterScale;
@@ -66,7 +66,7 @@ export class AnimateCSSGridItem<Mode extends AnimateCSSGridMode = 'absolute'>
     animateGrid: IAnimateGrid,
     element: HTMLElement,
     {
-      easing = 'easeInOut',
+      easing = easeInOut,
       duration = DEFAULT_DURATION,
       autoSetCounterScaler = true,
       mode = 'absolute' as Mode,
@@ -410,6 +410,7 @@ export class AnimateCSSGridItem<Mode extends AnimateCSSGridMode = 'absolute'>
       const transformAnimation = animate({
         from: toCSS(this.currentFromTransform),
         to: toCSS(this.currentToTransform),
+        ease: this.easing,
         duration: this.duration, // TODO: use this from options
         onUpdate: (value: string) => {
           // We assume the element is not null here, and if it is, the use will get an error
@@ -437,6 +438,7 @@ export class AnimateCSSGridItem<Mode extends AnimateCSSGridMode = 'absolute'>
         whAnimation = animate({
           from: `${this.currentFromRect.width};${this.currentFromRect.height}`,
           to: `${this.currentToRect.width};${this.currentToRect.height}`,
+          ease: this.easing,
           duration: this.duration, // TODO: use this from options
           onUpdate: (value: string) => {
             const [newWidth, newHeight] = value.split(';');
