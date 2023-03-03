@@ -2,11 +2,9 @@ import {
   AnimateCSSGridEvent,
   AnimateCSSGridEventCallback,
   animateCSSGridEventsToItemsMap,
-  animateCSSGridItemEvents,
   AnimateCSSGridMode,
   AnimateCSSGridModeOptions,
   AnimateCSSGridOptions,
-  PopmotionEasing,
 } from '../types';
 import wait from 'wait';
 import { throttle } from 'lodash';

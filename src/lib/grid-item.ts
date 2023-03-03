@@ -7,7 +7,6 @@ import {
   AnimateCSSGridMode,
   AnimateCSSGridModeOptions,
   BoundingClientRect,
-  PopmotionEasing,
 } from '../types';
 import { wait2 } from './wait';
 import { IAnimateGridItem } from '../types/grid-item';
