@@ -61,6 +61,9 @@ Optional config object:
   duration: 500
   // string: default is 'easeInOut'
   easing: 'backInOut',
+  // see ## Modes
+  mode: 'absolute',
+  modeOptions: {},
 }
 ```
 
@@ -109,9 +112,25 @@ gridItem.unExtract()
 gridItem.destroy()
 ```
 
+### Modes
+
+The grid can be animated in different modes, which require some different setup.
+
+#### `mode: 'static'`
+
+This is the simplest mode, which does not require any extra css setup to work.
+The elements will be animated with transforms
+
+#### `mode: 'absolute'` (default)
+
+This requires the grid to have `postion: relative` or a relativ-ish position.
+The elements will still be animated with scale and translate, but gives you some extra options.
+By default `modeOptions.animateWidthHeight` is set to `true`, which will animate the grid itself if it changes height or width.
+Alternatively you may want `modeOptions.itemAnimateWidthHeight` (default `false`) set to true for the items to be animated using width/height instead of scale.
+
 ### Events
 
-These are the event types. If you use typescript you should use the provided enum (AnimateCSSGridEvents ).
+These are the event types.
 
 ```js
 ag.on('start', (affectedElements) => {})
@@ -123,6 +142,8 @@ ag.on('itemEnd', (item) => {})
 ag.on('itemBeforeDestroy', (item) => {})
 ag.on('itemAfterDestroy', (item) => {})
 ```
+
+TODO: add documentation for AnimateCSSGridItem
 
 ## Requirements
 
