@@ -32,7 +32,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build project
-        run: pnpm run vitebuild
+        run: pnpm run build:gh-pages
 
       - name: Upload production-ready build files
         uses: actions/upload-artifact@v3

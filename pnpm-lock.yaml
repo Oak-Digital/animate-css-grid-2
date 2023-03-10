@@ -13,7 +13,7 @@ specifiers:
   rimraf: ^4.3.1
   transformation-matrix: ^2.14.0
   typescript: ^4.9.5
-  vite: ^4.0.4
+  vite: ^4.1.4
   wait: ^0.4.2
 
 dependencies:
@@ -32,7 +32,7 @@ devDependencies:
   eslint: 8.32.0
   rimraf: 4.3.1
   typescript: 4.9.5
-  vite: 4.0.4
+  vite: 4.1.4
 
 packages:
 
@@ -1339,8 +1339,8 @@ packages:
       punycode: 2.2.0
     dev: true
 
-  /vite/4.0.4:
-    resolution: {integrity: sha512-xevPU7M8FU0i/80DMR+YhgrzR5KS2ORy1B4xcX/cXLsvnUWvfHuqMmVU6N0YiJ4JWGRJJsLCgjEzKjG9/GKoSw==}
+  /vite/4.1.4:
+    resolution: {integrity: sha512-3knk/HsbSTKEin43zHu7jTwYWv81f8kgAL99G5NWBcA1LKvtvcVAC4JjBH1arBunO9kQka+1oGbrMKOjk4ZrBg==}
     engines: {node: ^14.18.0 || >=16.0.0}
     hasBin: true
     peerDependencies:
