@@ -1,6 +1,6 @@
 # Animate CSS Grid
 
-[Demo example](https://animate-css-grid-2-oak-digital.vercel.app/)
+[Demo example](https://oak-digital.github.io/animate-css-grid-2/)
 
 Seamlessly animate all CSS grid properties, including:
 
